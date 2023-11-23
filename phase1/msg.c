@@ -19,7 +19,7 @@ msg_t *allocMsg() {
 	msg_t *msg = container_of(msgFree_h.next, msg_t, m_list);
 	// remove the message from msgFree list
 	list_del(&(msg->m_list));
-	// reinitialize the vars
+	// reset the struct
 	INIT_LIST_HEAD(&(msg->m_list));
 	msg->m_sender = NULL;
 	msg->m_payload = 0;
@@ -39,10 +39,25 @@ void insertMessage(struct list_head *head, msg_t *m) {
 }
 
 void pushMessage(struct list_head *head, msg_t *m) {
+	list_add(&(m->m_list), head);
 }
 
 msg_t *popMessage(struct list_head *head, pcb_t *p_ptr) {
+	struct msg_t *iter;
+	list_for_each_entry(iter, head, m_list) {
+		if (iter->m_sender == p_ptr || p_ptr == NULL) {
+			list_del(&(iter->m_list));
+			return iter;
+		}
+	}
+	// list empty (the cycle is not executed) or p_ptr not found
+	return NULL;
 }
 
 msg_t *headMessage(struct list_head *head) {
+	// list_empty is optimized with inline, emptyMessageQ isn't
+	if (list_empty(head))
+		return NULL;
+	else
+		return container_of(head->next, msg_t, m_list);
 }
