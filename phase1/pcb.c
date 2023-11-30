@@ -25,7 +25,8 @@ pcb_t *allocPcb() {
     p->p_child.prev=NULL;
     p->msg_inbox.next=NULL;
     p->msg_inbox.prev=NULL;
-    p->p_pid=0;
+    p->p_pid=next_pid;
+    next_pid++;
     p->p_s.cause=0;
     p->p_s.entry_hi=0;
     for (int i = 0; i < 32; i++)
