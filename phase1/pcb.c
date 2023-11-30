@@ -48,6 +48,7 @@ int emptyProcQ(struct list_head *head) {
 
 void insertProcQ(struct list_head* head, pcb_t* p) {
     list_add_tail(&(p->p_list), head);
+    p->p_parent = container_of(head->next,pcb_t,p_list)->p_parent;
 }
 
 pcb_t* headProcQ(struct list_head* head) {
@@ -86,17 +87,7 @@ void insertChild(pcb_t *prnt, pcb_t *p) {
 	p->p_parent = prnt;
 
 	// 2. add *p to *prnt's children list
-	list_add_tail(&(p->p_list), &(prnt->p_child));
-
-	// 3. set *p's siblings list to the rest of *prnt's children
-	LIST_HEAD(sib_list);
-	struct list_head *iterPointer = prnt->p_child.next;
-	while (iterPointer != &(prnt->p_child)) {
-		if (container_of(iterPointer, pcb_t, p_child) != p)
-			list_add(iterPointer, &sib_list);
-		iterPointer = iterPointer->next;
-	}
-	p->p_sib = sib_list;
+	list_add_tail(&(p->p_sib), &(prnt->p_child));
 }
 
 pcb_t* removeChild(pcb_t *p) {
