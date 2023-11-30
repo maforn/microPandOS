@@ -58,7 +58,7 @@ pcb_t* removeChild(pcb_t *p) {
 
 	// remove *p's first child
 	pcb_t* removed_child = container_of(p->p_child.next, pcb_t, p_child);
-	__list_del(&(p->p_child), p->p_child.next->next);
+	list_del(p->p_child.next);
 
 	return removed_child;
 }
@@ -70,7 +70,7 @@ pcb_t* outChild(pcb_t *p) {
 	struct list_head *iterPointer = p->p_parent->p_child.next;
 	while (container_of(iterPointer, pcb_t, p_child) != p)
 		iterPointer = iterPointer->next;
-	__list_del(iterPointer->prev, iterPointer->next);
+	list_del(iterPointer);
 
 	// set *p's parent to NULL
 	p->p_parent = NULL;
