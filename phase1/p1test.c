@@ -104,10 +104,10 @@ void addokbuf(char *strp) {
  *	causes the string to be written out to terminal0.  After this is done
  *	the system shuts down with a panic message */
 void adderrbuf(char *strp) {
-    //char *ep    = errbuf;
+    char *ep    = errbuf;
     char *tstrp = strp;
 
-    while ((*mp++ = *strp++) != '\0')
+    while ((*ep++ = *strp++) != '\0')
         ;
 
     termprint(tstrp, 0);
