@@ -70,8 +70,14 @@ pcb_t* removeProcQ(struct list_head* head) {
 pcb_t* outProcQ(struct list_head* head, pcb_t* p) {
     if (emptyProcQ(head))
         return NULL;
-    list_del(&(p->p_list));
-    return p;
+    pcb_t *iter;
+    list_for_each_entry(iter,head,p_list){
+        if (iter==p){
+            list_del(&(p->p_list));
+            return p;
+        }
+    }
+    return NULL;
 }
 
 int emptyChild(pcb_t *p) {
