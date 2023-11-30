@@ -20,11 +20,9 @@ pcb_t *allocPcb() {
         return NULL;
     pcb_t *p = container_of(pcbFree_h.next,pcb_t,p_list);
     list_del(&p->p_list);
-    p->p_parent=NULL;
-    p->p_child.next=NULL;
-    p->p_child.prev=NULL;
-    p->msg_inbox.next=NULL;
-    p->msg_inbox.prev=NULL;
+    p->p_parent = NULL;
+    INIT_LIST_HEAD(&(p->p_child));
+    INIT_LIST_HEAD(&(p->msg_inbox));
     p->p_pid=next_pid;
     next_pid++;
     p->p_s.cause=0;
@@ -34,8 +32,7 @@ pcb_t *allocPcb() {
     p->p_s.mie=0;
     p->p_s.pc_epc=0;
     p->p_s.status=0;
-    p->p_sib.next=NULL;
-    p->p_sib.next=NULL;
+    INIT_LIST_HEAD(&(p->p_sib));
     p->p_supportStruct=NULL;
     p->p_time=0;
     return p;
