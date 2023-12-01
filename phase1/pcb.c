@@ -48,7 +48,6 @@ int emptyProcQ(struct list_head *head) {
 
 void insertProcQ(struct list_head* head, pcb_t* p) {
     list_add_tail(&(p->p_list), head);
-    p->p_parent = container_of(head->next,pcb_t,p_list)->p_parent;
 }
 
 pcb_t* headProcQ(struct list_head* head) {
