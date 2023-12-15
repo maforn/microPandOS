@@ -18,17 +18,19 @@ void freePcb(pcb_t *p) {
 pcb_t *allocPcb() {
     if (list_empty(&pcbFree_h))
         return NULL;
+    // allocate and init all values of the freed pcb
     pcb_t *p = container_of(pcbFree_h.next,pcb_t,p_list);
     list_del(&p->p_list);
     p->p_parent = NULL;
     INIT_LIST_HEAD(&(p->p_child));
     INIT_LIST_HEAD(&(p->msg_inbox));
+    // set and augment next_pid
     p->p_pid=next_pid;
     next_pid++;
     p->p_s.cause=0;
     p->p_s.entry_hi=0;
     for (int i = 0; i < 32; i++)
-        p->p_s.gpr[i]=0;
+    	p->p_s.gpr[i]=0;
     p->p_s.mie=0;
     p->p_s.pc_epc=0;
     p->p_s.status=0;
@@ -67,9 +69,10 @@ pcb_t* removeProcQ(struct list_head* head) {
 pcb_t* outProcQ(struct list_head* head, pcb_t* p) {
     if (emptyProcQ(head))
         return NULL;
+    // iterate the list to check if p is inside then return p, else return NULL
     pcb_t *iter;
     list_for_each_entry(iter,head,p_list){
-        if (iter==p){
+        if (iter == p){
             list_del(&(p->p_list));
             return p;
         }
@@ -82,10 +85,8 @@ int emptyChild(pcb_t *p) {
 }
 
 void insertChild(pcb_t *prnt, pcb_t *p) {
-	// 1. set parent of *p to *prnt
 	p->p_parent = prnt;
 
-	// 2. add *p to *prnt's children list
 	list_add_tail(&(p->p_sib), &(prnt->p_child));
 }
 
