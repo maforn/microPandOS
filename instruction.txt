@@ -1,0 +1,18 @@
+eseguire per primo
+uriscv-cli --gdb --config ./config_machine.json
+su un'altra finestra avviare a ./cli-debug.sh
+e connettersi con
+target remote :8080
+
+impostare un breakpoint con
+b nome_funzione (ad esempio exceptionHandler)
+e continuare con 
+continue
+
+i registri di sistema sono intorno all'indirizzo di BIOSDATAPAGE 0x0FFFF000
+per printare:
+p *(state_t *) 0x0FFFF000
+per printare in hex con /x, in binario con /t
+
+ad esempio per vedere cause è possibile fare
+p/t (*(state_t *) 0x0FFFF000)->cause
