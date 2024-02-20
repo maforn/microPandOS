@@ -16,3 +16,7 @@ per printare in hex con /x, in binario con /t
 
 ad esempio per vedere cause è possibile fare
 p/t (*(state_t *) 0x0FFFF000)->cause
+
+le syscall mettono i loro parametri in a0, a1, a2 e a3
+per ottenere il codice a0
+p (int)(*(state_t *)0x0FFFF000)->gpr[24]

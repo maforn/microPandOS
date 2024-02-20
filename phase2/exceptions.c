@@ -6,6 +6,32 @@
 #include <uriscv/liburiscv.h>
 #include <uriscv/types.h>
 
+// controllare funzioni
+void *memcpy(void *dst, const void *src, unsigned int len) {
+	unsigned int i;
+	if ((unsigned int)dst % sizeof(long) == 0 &&
+             (unsigned int)src % sizeof(long) == 0 &&
+             len % sizeof(long) == 0) {
+
+                 long *d = dst;
+                 const long *s = src;
+
+                 for (i=0; i<len/sizeof(long); i++) {
+                         d[i] = s[i];
+                 }
+         }
+         else {
+                 char *d = dst;
+                 const char *s = src;
+
+                 for (i=0; i<len; i++) {
+                         d[i] = s[i];
+                 }
+         }
+
+         return dst;
+}
+
 void uTLB_RefillHandler() {
 	setENTRYHI(0x80000000);
 	setENTRYLO(0x00000000);
@@ -32,7 +58,8 @@ void exceptionHandler() {
 		else if (cause == 7) { // PLT timer
 			// non abbiamo chiamato setTIMER perché viene fatto nello scheduel
 			
-			current_process->p_s = (state_t *)BIOSDATAPAGE;
+			// TODO: trovare qualcosa come memcpy
+			memcpy(&current_process->p_s, (state_t *)BIOSDATAPAGE, sizeof(state_t));
 			insertProcQ(&ready_queue, current_process);
 			schedule();
 		}
@@ -44,7 +71,28 @@ void exceptionHandler() {
 		}
 	}
 	else {
+		if (cause >= 8 && cause <= 11) { // Syscall
+			state_t *proc_state  = (state_t *)BIOSDATAPAGE;
+			if (!(proc_state->status & STATUS_MPP_ON)) { // user mode
+				/*The above two Nucleus services are considered privileged services and are only available to processes
+executing in kernel-mode. Any attempt to request one of these services while in user-mode should
+trigger a Program Trap exception response.
+6
+In particular the Nucleus should simulate a Program Trap exception when a privileged service is
+requested in user-mode. This is done by setting Cause.ExcCode in the stored exception state to RI
+(Reserved Instruction), and calling one’s Program Trap exception handler.
+Technical Point: As described above [Section 4], the saved exception state (for Processor 0) is
+stored at the start of the BIOS Data Page (0x0FFF.F000) [Section 3.2.2-pops].*/
+			}
+			else {
+				if (proc_state->reg_a0 == SENDMESSAGE) {
+					
+				}
+				else if (proc_state->reg_a0 == RECEIVEMESSAGE) {
 
+				}
+			}
+		}
 	}
 	/* Interrupt Exception code Description
 	1 3 Interval Timer

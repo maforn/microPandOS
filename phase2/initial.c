@@ -1,4 +1,3 @@
-#include "../phase1/headers/pcb.h"
 #include "../phase1/headers/msg.h"
 
 // (1)
@@ -16,7 +15,7 @@ struct list_head blocked_pcbs[SEMDEVLEN][2];
 
 //extern void test();
 void test() {
-
+	while (1) {}
 }
 
 int main() {
