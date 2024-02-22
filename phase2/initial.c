@@ -67,6 +67,7 @@ int main() {
 	pcb_t *second_process = allocPcb();
 	insertProcQ(&ready_queue, second_process);
 	process_count++;
+	second_process->p_s.mie = MIE_ALL;
 	// TODO: controllare come sopra
 	second_process->p_s.status = STATUS_INTERRUPT_ON_NEXT;
 	// FRAMESIZE should be ram's frames -> const PAGESIZE (4kB)
