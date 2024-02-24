@@ -1,14 +1,15 @@
 #include "../phase1/headers/msg.h"
+#include "./headers/initial.h"
 
 // (1)
 // In the header file
 int process_count, soft_block_count;
 struct list_head ready_queue;
 pcb_t *current_process;
-struct list_head blocked_pcbs[SEMDEVLEN][2];
+struct list_head blocked_pcbs[DEVINTNUM][DEVPERINT];
+struct list_head waiting_IT;
 // TODO: Blocked PCBs controllare la correttezza
 
-#include "./headers/initial.h"
 #include "./headers/scheduler.h"
 #include "./headers/exceptions.h"
 #include "./headers/ssi.h"
@@ -36,10 +37,11 @@ int main() {
 	process_count = 0;
 	soft_block_count = 0;
 	mkEmptyProcQ(&ready_queue);
-	for (int i = 0; i < SEMDEVLEN; i++) {
-		mkEmptyProcQ(&blocked_pcbs[i][0]);
-		mkEmptyProcQ(&blocked_pcbs[i][1]);
+	for (int i = 0; i < DEVINTNUM; i++) {
+		for (int e = 0; e < DEVPERINT; e++)
+			mkEmptyProcQ(&blocked_pcbs[i][e]);
 	}
+	mkEmptyProcQ(&waiting_IT);
 
 	// (5)
 	// TODO: controllare sia la funzione giusta (presa da const.h)

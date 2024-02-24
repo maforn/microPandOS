@@ -10,12 +10,25 @@ int createProcess(pcb_t * sender, ssi_create_process_t *arg);
 
 void terminateProcess(pcb_t *arg);
 
-unsigned int doIO(pcb_t *sender, ssi_do_io_t *arg);
+void doIO(pcb_t *sender, ssi_do_io_t *arg);
 
 void SSIRequest(pcb_t* sender, int service, void* arg);
 
 void SSI_function_entry_point() {
 	while (1) {
+		char msg = 'a';
+		char *s = &msg;
+        	unsigned int *base = (unsigned int*)(0x10000254);
+        	unsigned int *command = base + 3;
+
+            	unsigned int value = PRINTCHR | (((unsigned int)*s) << 8);
+            	ssi_do_io_t do_io = {
+            	    .commandAddr = command,
+            	    .commandValue = value,
+            	};
+		doIO(current_process, &do_io);
+		while(1) {}
+
 		ssi_payload_t payload;
 		pcb_t *sender = (pcb_t *)SYSCALL(RECEIVEMESSAGE, ANYMESSAGE, (unsigned int)&payload, 0);
 		SSIRequest(sender, payload.service_code, &payload.arg);
@@ -49,10 +62,26 @@ void terminateProcess(pcb_t *arg) {
 	freePcb(arg);
 }
 
-unsigned int doIO(pcb_t *sender, ssi_do_io_t *arg) {
+void doIO(pcb_t *sender, ssi_do_io_t *arg) {
 	ssi_do_io_t do_io;
 	memcpy(&do_io, arg, sizeof(ssi_do_io_t));
-	return 0;
+	// block the pcb: get the device and controller from the address
+	unsigned int device_number = ((unsigned int)do_io.commandAddr - START_DEVREG) / (DEVPERINT  * DEVREGSIZE);
+	unsigned int controller_number = (((unsigned int)do_io.commandAddr - START_DEVREG) / DEVREGSIZE) % DEVPERINT;
+	debug(&device_number);
+	debug(&controller_number);
+	unsigned int a = *(unsigned int *)0x10000050;
+	debug(&a);
+	// save the new current status
+	//memcpy(&(current_process->p_s), (state_t *)BIOSDATAPAGE, sizeof(state_t));
+	//insertProcQ(&blocked_pcbs[device_number][controller_number], current_process);
+	// write on device address specified
+	*(do_io.commandAddr) = do_io.commandValue;
+	devreg_t *controller = (devreg_t *)(0x10000254);
+	debug(controller);
+	// TODO: controlla che debba passare da qui il controllo
+	// pass to the next process
+	//schedule();
 }
 
 void SSIRequest(pcb_t* sender, int service, void* arg) {
@@ -66,6 +95,7 @@ void SSIRequest(pcb_t* sender, int service, void* arg) {
 			terminateProcess(arg);
 			if (arg != sender)
 				SYSCALL(SENDMESSAGE, (unsigned int)sender, 0, 0);
+			// TODO: controllare che sia "legale" chiamare lo scheduler da SSI
 			else // the caller is current_process
 				schedule();
 			break;

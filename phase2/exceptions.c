@@ -5,6 +5,7 @@
 #include "./headers/scheduler.h"
 #include "./headers/utils.h"
 #include <uriscv/liburiscv.h>
+#include <uriscv/arch.h>
 
 
 void uTLB_RefillHandler() {
@@ -19,17 +20,32 @@ void exceptionHandler() {
 	// if the first bit is 1 it's an interrupt
 	if (cause >= 1 << 31) {
 		cause -= 1 << 31;
-		if (cause == 3) { // interval timer
+		if (cause == IL_TIMER)  // interval timer
 			handleIntervalTimer();
-		} 
-		else if (cause == 7) { // PLT timer
+		else if (cause == IL_CPUTIMER)  // PLT timer
 			handlePLT();
-		}
-		else if (cause == 17) { // Disk Device
+		else if (cause == IL_IPI) { // Inter Processor Interrupt
 
 		}
-		else if (cause == 18) { // Flash Device
+		else if (cause == IL_DISK) { // Disk Device
 
+		}
+		else if (cause == IL_FLASH) { // Flash Device
+
+		}
+		else if (cause == IL_ETHERNET) {
+
+		}
+		else if (cause == IL_PRINTER) {
+
+		}
+		else if (cause == IL_TERMINAL) {
+			unsigned int a = *(unsigned int *)CDEV_BITMAP_ADDR(IL_TERMINAL);
+			devreg_t *controller = (devreg_t *)DEV_REG_ADDR(IL_TERMINAL, 0);
+			debug(controller);
+			controller->term.transm_command = ACK;
+			a = *(unsigned int *)CDEV_BITMAP_ADDR(IL_TERMINAL);
+			debug(&a);
 		}
 	}
 	else {
