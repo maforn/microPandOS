@@ -13,6 +13,18 @@ void uTLB_RefillHandler() {
 	LDST((state_t*) 0x0FFFF000);
 }
 
+void passUpOrDie(int excType) {
+	if (current_process->p_supportStruct == NULL) { // terminate process and its progeny
+								
+	}
+	else { // pass up
+		state_t *proc_state = (state_t*) BIOSDATAPAGE;
+		support_t *support_struct = current_process->p_supportStruct;
+		support_struct->sup_exceptState[excType] = *proc_state;
+		LDCXT(support_struct->sup_exceptContext[excType].stackPtr, support_struct->sup_exceptContext[excType].status, support_struct->sup_exceptContext[excType].pc);
+	}
+}
+
 void exceptionHandler() {
 	unsigned int cause = getCAUSE();
 	// if the first bit is 1 it's an interrupt
@@ -34,15 +46,7 @@ void exceptionHandler() {
 	else {
 		// Trap
 		if ((cause >= 0 && cause <= 7) || (cause >= 11 && cause <= 24)) {
-			if (current_process->p_supportStruct == NULL) { // terminate process and its progeny
-								
-			}
-			else { // pass up
-				state_t *proc_state = (state_t*) BIOSDATAPAGE;
-				support_t *support_struct = current_process->p_supportStruct;
-				support_struct->sup_exceptState[GENERALEXCEPT] = *proc_state;
-				LDCXT(support_struct->sup_exceptContext[GENERALEXCEPT].stackPtr, support_struct->sup_exceptContext[GENERALEXCEPT].status, support_struct->sup_exceptContext[GENERALEXCEPT].pc);
-			}
+			passUpOrDie(GENERALEXCEPT);
 		}
 		else if (cause >= 8 && cause <= 11) { // Syscall
 			state_t *proc_state  = (state_t *)BIOSDATAPAGE;
@@ -65,29 +69,13 @@ stored at the start of the BIOS Data Page (0x0FFF.F000) [Section 3.2.2-pops].*/
 
 				}
 				else if (proc_state->reg_a0 >= 1) {
-					if (current_process->p_supportStruct == NULL) { // terminate process and its progeny
-				
-					}
-					else { // pass up
-						state_t *proc_state = (state_t*) BIOSDATAPAGE;
-						support_t *support_struct = current_process->p_supportStruct;
-						support_struct->sup_exceptState[GENERALEXCEPT] = *proc_state;
-						LDCXT(support_struct->sup_exceptContext[GENERALEXCEPT].stackPtr, support_struct->sup_exceptContext[GENERALEXCEPT].status, support_struct->sup_exceptContext[GENERALEXCEPT].pc);
-					}
+					passUpOrDie(GENERALEXCEPT);
 				}
 			}
 		}
 		// TLB exceptions
 		else if (cause >= 24 && cause <= 28) {
-			if (current_process->p_supportStruct == NULL) { // terminate process and its progeny
-				
-			}
-			else { // pass up
-				state_t *proc_state = (state_t*) BIOSDATAPAGE;
-				support_t *support_struct = current_process->p_supportStruct;
-				support_struct->sup_exceptState[PGFAULTEXCEPT] = *proc_state;
-				LDCXT(support_struct->sup_exceptContext[PGFAULTEXCEPT].stackPtr, support_struct->sup_exceptContext[PGFAULTEXCEPT].status, support_struct->sup_exceptContext[PGFAULTEXCEPT].pc);
-			}
+			passUpOrDie(PGFAULTEXCEPT);
 		}
 	}
 
