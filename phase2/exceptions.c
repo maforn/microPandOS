@@ -35,13 +35,13 @@ void exceptionHandler() {
 		// Trap
 		if ((cause >= 0 && cause <= 7) || (cause >= 11 && cause <= 24)) {
 			if (current_process->p_supportStruct == NULL) { // terminate process and its progeny
-				
+								
 			}
 			else { // pass up
 				state_t *proc_state = (state_t*) BIOSDATAPAGE;
-				support_t proc_support_struct = current_process->p_supportStruct;
-				proc_support_struct.sup_exceptState[GENERALEXCEPT] = proc_state;
-				LDCXT(proc_support_struct.sup_exceptContext[GENERALEXCEPT].stackPtr)
+				support_t *support_struct = current_process->p_supportStruct;
+				support_struct->sup_exceptState[GENERALEXCEPT] = *proc_state;
+				LDCXT(support_struct->sup_exceptContext[GENERALEXCEPT].stackPtr, support_struct->sup_exceptContext[GENERALEXCEPT].status, support_struct->sup_exceptContext[GENERALEXCEPT].pc);
 			}
 		}
 		else if (cause >= 8 && cause <= 11) { // Syscall
@@ -70,9 +70,9 @@ stored at the start of the BIOS Data Page (0x0FFF.F000) [Section 3.2.2-pops].*/
 					}
 					else { // pass up
 						state_t *proc_state = (state_t*) BIOSDATAPAGE;
-						support_t proc_support_struct = current_process->p_supportStruct;
-						proc_support_struct.sup_exceptState[GENERALEXCEPT] = proc_state;
-						LDCXT(proc_support_struct.sup_exceptContext[GENERALEXCEPT].stackPtr)
+						support_t *support_struct = current_process->p_supportStruct;
+						support_struct->sup_exceptState[GENERALEXCEPT] = *proc_state;
+						LDCXT(support_struct->sup_exceptContext[GENERALEXCEPT].stackPtr, support_struct->sup_exceptContext[GENERALEXCEPT].status, support_struct->sup_exceptContext[GENERALEXCEPT].pc);
 					}
 				}
 			}
@@ -84,9 +84,9 @@ stored at the start of the BIOS Data Page (0x0FFF.F000) [Section 3.2.2-pops].*/
 			}
 			else { // pass up
 				state_t *proc_state = (state_t*) BIOSDATAPAGE;
-				support_t proc_support_struct = current_process->p_supportStruct;
-				proc_support_struct.sup_exceptState[PGFAULTEXCEPT] = proc_state;
-				LDCXT(proc_support_struct.sup_exceptContext[PGFAULTEXCEPT].stackPtr)
+				support_t *support_struct = current_process->p_supportStruct;
+				support_struct->sup_exceptState[PGFAULTEXCEPT] = *proc_state;
+				LDCXT(support_struct->sup_exceptContext[PGFAULTEXCEPT].stackPtr, support_struct->sup_exceptContext[PGFAULTEXCEPT].status, support_struct->sup_exceptContext[PGFAULTEXCEPT].pc);
 			}
 		}
 	}
