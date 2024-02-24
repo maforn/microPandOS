@@ -20,7 +20,7 @@ void exceptionHandler() {
 		cause -= 1 << 31;
 		if (cause == 3) { // interval timer
 			handleIntervalTimer();
-		} 
+		}
 		else if (cause == 7) { // PLT timer
 			handlePLT();
 		}
@@ -35,7 +35,7 @@ void exceptionHandler() {
 		// Trap
 		if ((cause >= 0 && cause <= 7) || (cause >= 11 && cause <= 24)) {
 			if (current_process->p_supportStruct == NULL) { // terminate process and its progeny
-				current = 3
+				
 			}
 			else { // pass up
 				state_t *proc_state = (state_t*) BIOSDATAPAGE;
