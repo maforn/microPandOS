@@ -6,7 +6,6 @@
 #include "./headers/utils.h"
 #include <uriscv/liburiscv.h>
 
-
 void uTLB_RefillHandler() {
 	setENTRYHI(0x80000000);
 	setENTRYLO(0x00000000);
@@ -33,7 +32,19 @@ void exceptionHandler() {
 		}
 	}
 	else {
-		if (cause >= 8 && cause <= 11) { // Syscall
+		// Trap
+		if ((cause >= 0 && cause <= 7) || (cause >= 11 && cause <= 24)) {
+			if (current_process->p_supportStruct == NULL) { // terminate process and its progeny
+				current = 3
+			}
+			else { // pass up
+				state_t *proc_state = (state_t*) BIOSDATAPAGE;
+				support_t proc_support_struct = current_process->p_supportStruct;
+				proc_support_struct.sup_exceptState[GENERALEXCEPT] = proc_state;
+				LDCXT(proc_support_struct.sup_exceptContext[GENERALEXCEPT].stackPtr)
+			}
+		}
+		else if (cause >= 8 && cause <= 11) { // Syscall
 			state_t *proc_state  = (state_t *)BIOSDATAPAGE;
 			if (!(proc_state->status & STATUS_MPP_ON)) { // user mode
 				/*The above two Nucleus services are considered privileged services and are only available to processes
@@ -55,7 +66,20 @@ stored at the start of the BIOS Data Page (0x0FFF.F000) [Section 3.2.2-pops].*/
 				}
 			}
 		}
+		// TLB exceptions
+		else if (cause >= 24 && cause <= 28) {
+			if (current_process->p_supportStruct == NULL) { // terminate process and its progeny
+				
+			}
+			else { // pass up
+				state_t *proc_state = (state_t*) BIOSDATAPAGE;
+				support_t proc_support_struct = current_process->p_supportStruct;
+				proc_support_struct.sup_exceptState[PGFAULTEXCEPT] = proc_state;
+				LDCXT(proc_support_struct.sup_exceptContext[PGFAULTEXCEPT].stackPtr)
+			}
+		}
 	}
+
 	/* Interrupt Exception code Description
 	1 3 Interval Timer
 	1 7 PLT Timer
