@@ -64,6 +64,17 @@ stored at the start of the BIOS Data Page (0x0FFF.F000) [Section 3.2.2-pops].*/
 				else if (proc_state->reg_a0 == RECEIVEMESSAGE) {
 
 				}
+				else if (proc_state->reg_a0 >= 1) {
+					if (current_process->p_supportStruct == NULL) { // terminate process and its progeny
+				
+					}
+					else { // pass up
+						state_t *proc_state = (state_t*) BIOSDATAPAGE;
+						support_t proc_support_struct = current_process->p_supportStruct;
+						proc_support_struct.sup_exceptState[GENERALEXCEPT] = proc_state;
+						LDCXT(proc_support_struct.sup_exceptContext[GENERALEXCEPT].stackPtr)
+					}
+				}
 			}
 		}
 		// TLB exceptions
