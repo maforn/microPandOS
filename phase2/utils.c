@@ -2,10 +2,10 @@
 
 #include "../headers/listx.h"
 
-int contains(struct list_head head, struct list_head elem){
+int contains(struct list_head *head, struct list_head *elem){
     struct list_head* iter;
-        list_for_each(iter, &head) {
-            if(iter == &elem)
+        list_for_each(iter, head) {
+            if(iter == elem)
                 return 1;
         }
         return 0;

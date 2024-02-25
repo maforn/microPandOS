@@ -1,4 +1,5 @@
 #include "../phase1/headers/msg.h"
+#include <uriscv/liburiscv.h>
 
 // (1)
 // In the header file
@@ -15,7 +16,16 @@ struct list_head blocked_pcbs[SEMDEVLEN][2];
 
 //extern void test();
 void test() {
-	while (1) {}
+	pcb_PTR test_pcb = current_process;
+
+    // test send and receive
+    SYSCALL(SENDMESSAGE, (unsigned int)test_pcb, 0, 0);
+    pcb_PTR sender = (pcb_PTR)SYSCALL(RECEIVEMESSAGE, ANYMESSAGE, 0, 0);
+
+    if (sender != test_pcb)
+        PANIC();
+	else
+		PANIC();
 }
 
 int main() {

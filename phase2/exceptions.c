@@ -5,7 +5,7 @@
 #include "./headers/scheduler.h"
 #include "./headers/utils.h"
 #include <uriscv/liburiscv.h>
-#include <uriscv/types.h>
+#include "../phase1/headers/msg.h"
 
 void uTLB_RefillHandler() {
 	setENTRYHI(0x80000000);
@@ -50,6 +50,9 @@ stored at the start of the BIOS Data Page (0x0FFF.F000) [Section 3.2.2-pops].*/
 			exceptionHandler();
 			}
 			else {
+				// TODO: is the PC update necessary in every case? 
+				proc_state->pc_epc += 4;
+
 				if (proc_state->reg_a0 == SENDMESSAGE)
 					SendMessage(proc_state);
 				else if (proc_state->reg_a0 == RECEIVEMESSAGE)
@@ -78,44 +81,64 @@ void SendMessage(state_t *proc_state){
 	pcb_t *dst = (pcb_t *)proc_state->reg_a1;
 
 	// dst doesn't exist
-	if(contains(pcbFree_h, dst->p_list)){
-		proc_state->reg_a0 = DEST_NOT_EXIST; 
+	if(isFree(&dst->p_list)){
+		proc_state->reg_a0 = DEST_NOT_EXIST; //failed
 	}
 	// dst is waiting for a message from current process
-	else if(contains(blocked_pcbs[SEMDEVLEN][1], dst->p_list)
-			&& ((dst->p_s).reg_a1 == ANYMESSAGE || (dst->p_s).reg_a1 == current_process)){
+	else if(contains(&blocked_pcbs[SEMDEVLEN][1], &dst->p_list)
+			&& ((dst->p_s).reg_a1 == ANYMESSAGE || (pcb_t*)(dst->p_s).reg_a1 == current_process)){
 
 		// copy message and sender in designated memory areas
-		memcpy((dst->p_s).reg_a2, &proc_state->reg_a2, sizeof(unsigned int));
-		memcpy((dst->p_s).reg_a0, &current_process->p_pid, sizeof(int));
+		memcpy(&(dst->p_s).reg_a2, &proc_state->reg_a2, sizeof(unsigned int));
+		memcpy(&(dst->p_s).reg_a0, &current_process->p_pid, sizeof(int));
 			
 		// awake receveing process and update count
 		insertProcQ(&ready_queue, dst); 
 		soft_block_count--;
+
+		proc_state->reg_a0 = 0; // success
 	}
 	else{ // dst is in ready queue or (waiting for I/O or timer) or waiting for message from different sender
 		msg_t *msg = allocMsg();
 
 		if(msg == NULL){ // no available messages
-			proc_state->reg_a0 = MSGNOGOOD;
+			proc_state->reg_a0 = MSGNOGOOD; // failed
 		}
 		else{
+			// add message to dst inbox
 			msg->m_payload = proc_state->reg_a2; 
 			msg->m_sender = current_process;
 
 			pushMessage(&dst->msg_inbox, msg);
-			proc_state->reg_a0 = 0;
+			proc_state->reg_a0 = 0; // success
 		}
 	}
-}
-void ReceiveMessage(state_t *proc_state){
-	pcb_t *sender = proc_state->reg_a1;
-	msg_t *msg = popMessage(&current_process->msg_inbox, sender);
-	if (msg == NULL){
 
+	// update current process state and resume execution
+	memcpy(&current_process->p_s, proc_state, sizeof(state_t));
+	LDST(&current_process->p_s);
+}
+
+void ReceiveMessage(state_t *proc_state){
+	pcb_t *sender = (pcb_t *)proc_state->reg_a1;
+	msg_t *msg = popMessage(&current_process->msg_inbox, sender);
+
+	if (msg == NULL){
+		// TODO: save processor state and update CPU time
+	 	memcpy(&current_process->p_s, proc_state, sizeof(state_t));
+
+		// block process
+		insertProcQ(&blocked_pcbs[SEMDEVLEN][1], current_process);
+		schedule();
 	}
 	else{
+		// transfer data
 		proc_state->reg_a0 = msg->m_sender->p_pid;
-		memcpy(proc_state->reg_a2, &msg->m_payload, sizeof(unsigned int));
+		memcpy(&proc_state->reg_a2, &msg->m_payload, sizeof(unsigned int));
+		freeMsg(msg);
+
+		// update current process state and resume execution
+		memcpy(&current_process->p_s, proc_state, sizeof(state_t));
+		LDST(&current_process->p_s);
 	}
 }
