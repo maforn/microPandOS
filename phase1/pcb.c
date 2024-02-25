@@ -1,7 +1,7 @@
 ﻿#include "./headers/pcb.h"
 
 static pcb_t pcbTable[MAXPROC];  /* PCB array with maximum size 'MAXPROC' */
-pcbFree_h = LIST_HEAD_INIT(pcbFree_h);            /* List of free PCBs                     */
+LIST_HEAD(pcbFree_h);            /* List of free PCBs                     */
 static int next_pid = 1;
 
 void initPcbs() {
@@ -109,4 +109,8 @@ pcb_t* outChild(pcb_t *p) {
 	// set *p's parent to NULL
 	p->p_parent = NULL;
 	return p;
+}
+
+int isFree(struct list_head *elem){
+    return contains(&pcbFree_h, elem);
 }
