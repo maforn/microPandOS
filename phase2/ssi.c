@@ -5,12 +5,25 @@
 #include "./headers/utils.h"
 #include "../headers/types.h"
 #include <uriscv/liburiscv.h>
+#include <uriscv/arch.h>
+
+// TODO: check optimal solution
+typedef struct ssi_answer_do_io {
+	unsigned int status;
+	unsigned int device;
+	unsigned int controller;
+} ssi_answer_do_io_t;
+
+typedef union do_io_instruct {
+	ssi_do_io_t request;
+	ssi_answer_do_io_t answer;
+} do_io_instruct_t;
 
 int createProcess(pcb_t * sender, ssi_create_process_t *arg);
 
 void terminateProcess(pcb_t *arg);
 
-void doIO(pcb_t *sender, ssi_do_io_t *arg);
+void doIO(pcb_t *sender, do_io_instruct_t *arg);
 
 void SSIRequest(pcb_t* sender, int service, void* arg);
 
@@ -26,7 +39,9 @@ void SSI_function_entry_point() {
             	    .commandAddr = command,
             	    .commandValue = value,
             	};
-		doIO(current_process, &do_io);
+		do_io_instruct_t do_io_u = {.request = do_io};
+		debug(&do_io_u);
+		doIO(current_process, &(do_io_u));
 		while(1) {}
 
 		ssi_payload_t payload;
@@ -62,26 +77,31 @@ void terminateProcess(pcb_t *arg) {
 	freePcb(arg);
 }
 
-void doIO(pcb_t *sender, ssi_do_io_t *arg) {
-	ssi_do_io_t do_io;
-	memcpy(&do_io, arg, sizeof(ssi_do_io_t));
-	// block the pcb: get the device and controller from the address
-	unsigned int device_number = ((unsigned int)do_io.commandAddr - START_DEVREG) / (DEVPERINT  * DEVREGSIZE);
-	unsigned int controller_number = (((unsigned int)do_io.commandAddr - START_DEVREG) / DEVREGSIZE) % DEVPERINT;
-	debug(&device_number);
-	debug(&controller_number);
-	unsigned int a = *(unsigned int *)0x10000050;
-	debug(&a);
-	// save the new current status
-	//memcpy(&(current_process->p_s), (state_t *)BIOSDATAPAGE, sizeof(state_t));
-	//insertProcQ(&blocked_pcbs[device_number][controller_number], current_process);
-	// write on device address specified
-	*(do_io.commandAddr) = do_io.commandValue;
-	devreg_t *controller = (devreg_t *)(0x10000254);
-	debug(controller);
-	// TODO: controlla che debba passare da qui il controllo
-	// pass to the next process
-	//schedule();
+void doIO(pcb_t *sender, do_io_instruct_t *arg) {
+	// check that the process is trying to write in the devices addresses
+	if ((unsigned int)arg->request.commandAddr >= DEV_REG_START && (unsigned int)arg->request.commandAddr <= DEV_REG_END) {
+		ssi_do_io_t do_io;
+		memcpy(&do_io, &arg->request, sizeof(ssi_do_io_t));
+		// block the pcb: get the device and controller from the address
+		unsigned int device_number = ((unsigned int)do_io.commandAddr - START_DEVREG) / (DEVPERINT  * DEVREGSIZE);
+		unsigned int controller_number = (((unsigned int)do_io.commandAddr - START_DEVREG) / DEVREGSIZE) % DEVPERINT;
+		debug(&device_number);
+		debug(&controller_number);
+		unsigned int a = *(unsigned int *)0x10000050;
+		debug(&a);
+		// save the new current status
+		//memcpy(&(current_process->p_s), (state_t *)BIOSDATAPAGE, sizeof(state_t));
+		//insertProcQ(&blocked_pcbs[device_number][controller_number], current_process);
+		// write on device address specified
+		*(do_io.commandAddr) = do_io.commandValue;
+		devreg_t *controller = (devreg_t *)(0x10000254);
+		debug(controller);
+		// TODO: controlla che debba passare da qui il controllo
+		// pass to the next process
+		//schedule();
+	} else {
+
+	}
 }
 
 void SSIRequest(pcb_t* sender, int service, void* arg) {
