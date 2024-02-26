@@ -894,7 +894,8 @@ void p9()
     /* create p10 */
     p10_pcb = create_process(&p10state);
     SYSCALL(SENDMESSAGE, (unsigned int)test_pcb, 0, 0);
-    SYSCALL(RECEIVEMESSAGE, ANYMESSAGE, 0, 0initial}
+    SYSCALL(RECEIVEMESSAGE, ANYMESSAGE, 0, 0);
+}
 
 void p10()
 {
