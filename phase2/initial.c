@@ -8,6 +8,7 @@ struct list_head ready_queue;
 pcb_t *current_process;
 struct list_head blocked_pcbs[DEVINTNUM][DEVPERINT];
 struct list_head waiting_IT;
+pcb_t *ssi_pcb;
 // TODO: Blocked PCBs controllare la correttezza
 
 #include "./headers/scheduler.h"
@@ -48,19 +49,19 @@ int main() {
 	LDIT(PSECOND);
 
 	// (6)
-	pcb_t *first_process = allocPcb();
-	insertProcQ(&ready_queue, first_process);
+	ssi_pcb = allocPcb();
+	insertProcQ(&ready_queue, ssi_pcb);
 	process_count++;
-	first_process->p_s.mie = MIE_ALL;
+	ssi_pcb->p_s.mie = MIE_ALL;
 
 	// TODO: ricontrollare che sia giusto
-	first_process->p_s.status = STATUS_INTERRUPT_ON_NEXT;
+	ssi_pcb->p_s.status = STATUS_INTERRUPT_ON_NEXT;
 	// Obtain ramtop with the macro
 	memaddr ramtop;
 	RAMTOP(ramtop);
-	first_process->p_s.reg_sp = ramtop;
+	ssi_pcb->p_s.reg_sp = ramtop;
 
-	first_process->p_s.pc_epc = (memaddr)SSI_function_entry_point;
+	ssi_pcb->p_s.pc_epc = (memaddr)SSI_function_entry_point;
 	
 	// process tree to NULL already done by allocPcb()
 	// p_time = 0 by allocPcb again, as well as p_supportStruct

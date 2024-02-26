@@ -1,7 +1,10 @@
 #ifndef INTERRUPTS_H_INCLUDED
 #define INTERRUPTS_H_INCLUDED
 
+#define STATUS_MASK 0xff
+
 void handleIntervalTimer();
 void handlePLT();
+void handleDeviceInterrupt(unsigned short device_number);
 
 #endif

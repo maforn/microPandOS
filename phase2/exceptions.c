@@ -7,7 +7,6 @@
 #include <uriscv/liburiscv.h>
 #include <uriscv/arch.h>
 
-
 void uTLB_RefillHandler() {
 	setENTRYHI(0x80000000);
 	setENTRYLO(0x00000000);
@@ -18,34 +17,26 @@ void uTLB_RefillHandler() {
 void exceptionHandler() {
 	unsigned int cause = getCAUSE();
 	// if the first bit is 1 it's an interrupt
-	if (cause >= 1 << 31) {
-		cause -= 1 << 31;
+	if (cause & INTERRUPT_BIT) {
+		cause &= !INTERRUPT_BIT; // remove the interrupt bit so we can get the cause without the additional bit
 		if (cause == IL_TIMER)  // interval timer
 			handleIntervalTimer();
 		else if (cause == IL_CPUTIMER)  // PLT timer
 			handlePLT();
-		else if (cause == IL_IPI) { // Inter Processor Interrupt
-
-		}
 		else if (cause == IL_DISK) { // Disk Device
-
+			handleDeviceInterrupt(IL_DISK - DEV_IL_START);
 		}
 		else if (cause == IL_FLASH) { // Flash Device
-
+			handleDeviceInterrupt(IL_FLASH - DEV_IL_START);
 		}
 		else if (cause == IL_ETHERNET) {
-
+			handleDeviceInterrupt(IL_ETHERNET - DEV_IL_START);
 		}
 		else if (cause == IL_PRINTER) {
-
+			handleDeviceInterrupt(IL_PRINTER - DEV_IL_START);
 		}
 		else if (cause == IL_TERMINAL) {
-			unsigned int a = *(unsigned int *)CDEV_BITMAP_ADDR(IL_TERMINAL);
-			devreg_t *controller = (devreg_t *)DEV_REG_ADDR(IL_TERMINAL, 0);
-			debug(controller);
-			controller->term.transm_command = ACK;
-			a = *(unsigned int *)CDEV_BITMAP_ADDR(IL_TERMINAL);
-			debug(&a);
+			handleDeviceInterrupt(IL_TERMINAL - DEV_IL_START);
 		}
 	}
 	else {
