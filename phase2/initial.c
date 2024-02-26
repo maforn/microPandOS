@@ -20,14 +20,19 @@ pcb_t *ssi_pcb;
 void test() {
 	pcb_PTR test_pcb = current_process;
 
-    // test send and receive
-    SYSCALL(SENDMESSAGE, (unsigned int)test_pcb, 0, 0);
-    pcb_PTR sender = (pcb_PTR)SYSCALL(RECEIVEMESSAGE, ANYMESSAGE, 0, 0);
+	unsigned int payload = 15;
+	unsigned int dst = 0;
 
-    if (sender != test_pcb)
-        PANIC();
-	else
-		PANIC();
+    // test send and receive
+	SYSCALL(SENDMESSAGE, (unsigned int)test_pcb, (memaddr)&payload, 0);
+    	pcb_PTR sender = (pcb_PTR)SYSCALL(RECEIVEMESSAGE, ANYMESSAGE, (memaddr)&dst, 0);
+
+		if (sender != test_pcb)
+        	PANIC();
+		if (dst != (memaddr)&payload)
+			PANIC();
+
+	SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (memaddr)5, 0);
 }
 
 int main() {
@@ -60,16 +65,22 @@ int main() {
 	// (6)
 	ssi_pcb = allocPcb();
 	insertProcQ(&ready_queue, ssi_pcb);
+	ssi_pcb = allocPcb();
+	insertProcQ(&ready_queue, ssi_pcb);
 	process_count++;
+	ssi_pcb->p_s.mie = MIE_ALL;
 	ssi_pcb->p_s.mie = MIE_ALL;
 
 	// TODO: ricontrollare che sia giusto
+	ssi_pcb->p_s.status = STATUS_INTERRUPT_ON_NEXT;
 	ssi_pcb->p_s.status = STATUS_INTERRUPT_ON_NEXT;
 	// Obtain ramtop with the macro
 	memaddr ramtop;
 	RAMTOP(ramtop);
 	ssi_pcb->p_s.reg_sp = ramtop;
+	ssi_pcb->p_s.reg_sp = ramtop;
 
+	ssi_pcb->p_s.pc_epc = (memaddr)SSI_function_entry_point;
 	ssi_pcb->p_s.pc_epc = (memaddr)SSI_function_entry_point;
 	
 	// process tree to NULL already done by allocPcb()
