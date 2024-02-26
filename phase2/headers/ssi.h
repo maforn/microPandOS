@@ -3,4 +3,6 @@
 
 void SSI_function_entry_point();
 
+void terminateProcess(pcb_t *arg);
+
 #endif

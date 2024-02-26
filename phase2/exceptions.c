@@ -4,6 +4,7 @@
 #include "./headers/interrupts.h"
 #include "./headers/scheduler.h"
 #include "./headers/utils.h"
+#include "./headers/ssi.h"
 #include <uriscv/liburiscv.h>
 
 void uTLB_RefillHandler() {
@@ -14,8 +15,9 @@ void uTLB_RefillHandler() {
 }
 
 void passUpOrDie(int excType) {
-	if (current_process->p_supportStruct == NULL) { // terminate process and its progeny
-								
+	// terminate process and its progeny
+	if (current_process->p_supportStruct == NULL) {
+		terminateProcess(current_process);
 	}
 	else { // pass up
 		state_t *proc_state = (state_t*) BIOSDATAPAGE;
