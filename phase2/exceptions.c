@@ -1,11 +1,10 @@
-// TODO:  This module implements the TLB, Program Trap, and SYSCALL exception handlers. Furthermore, this module will contain the provided skeleton TLB-Refill event handler (e.g. uTLB_RefillHandler).
 #include "./headers/exceptions.h"
 #include "./headers/initial.h"
 #include "./headers/interrupts.h"
 #include "./headers/scheduler.h"
 #include "./headers/utils.h"
 #include <uriscv/liburiscv.h>
-
+#include <uriscv/arch.h>
 
 void uTLB_RefillHandler() {
 	setENTRYHI(0x80000000);
@@ -17,20 +16,22 @@ void uTLB_RefillHandler() {
 void exceptionHandler() {
 	unsigned int cause = getCAUSE();
 	// if the first bit is 1 it's an interrupt
-	if (cause >= 1 << 31) {
-		cause -= 1 << 31;
-		if (cause == 3) { // interval timer
+	if (cause & INTERRUPT_BIT) {
+		cause &= !INTERRUPT_BIT; // remove the interrupt bit so we can get the cause without the additional bit
+		if (cause == IL_TIMER)  // interval timer
 			handleIntervalTimer();
-		} 
-		else if (cause == 7) { // PLT timer
-			handlePLT();
-		}
-		else if (cause == 17) { // Disk Device
-
-		}
-		else if (cause == 18) { // Flash Device
-
-		}
+		else if (cause == IL_CPUTIMER)  // PLT timer
+			handleLocalTimer();
+		else if (cause == IL_DISK) // Disk Device
+			handleDeviceInterrupt(IL_DISK - DEV_IL_START);
+		else if (cause == IL_FLASH) // Flash Device
+			handleDeviceInterrupt(IL_FLASH - DEV_IL_START);
+		else if (cause == IL_ETHERNET)
+			handleDeviceInterrupt(IL_ETHERNET - DEV_IL_START);
+		else if (cause == IL_PRINTER) 
+			handleDeviceInterrupt(IL_PRINTER - DEV_IL_START);
+		else if (cause == IL_TERMINAL) 
+			handleDeviceInterrupt(IL_TERMINAL - DEV_IL_START);
 	}
 	else {
 		if (cause >= 8 && cause <= 11) { // Syscall
