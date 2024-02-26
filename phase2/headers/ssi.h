@@ -3,17 +3,14 @@
 
 #include "../../headers/types.h"
 
+#define UNBLOCKPROCESS 8
+
 // TODO: check optimal solution
-typedef struct ssi_answer_do_io {
+typedef struct ssi_unblock_do_io {
 	unsigned short status;
 	unsigned short device;
 	unsigned short controller;
-} ssi_answer_do_io_t;
-
-typedef union do_io_instruct {
-	ssi_do_io_t request;
-	ssi_answer_do_io_t answer;
-} do_io_instruct_t;
+} ssi_unblock_do_io_t;
 
 void SSI_function_entry_point();
 

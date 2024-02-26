@@ -4,7 +4,7 @@
 #define STATUS_MASK 0xff
 
 void handleIntervalTimer();
-void handlePLT();
+void handleLocalTimer();
 void handleDeviceInterrupt(unsigned short device_number);
 
 #endif

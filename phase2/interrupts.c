@@ -17,14 +17,11 @@ void handleIntervalTimer() {
         insertProcQ(&ready_queue, removeProcQ(&waiting_IT));
         soft_block_count--;
     }
-    // TODO: controllare quale state va loaddato
     LDST((state_t *)BIOSDATAPAGE);
 }
 
-void handlePLT() {
+void handleLocalTimer() {
     // non abbiamo chiamato setTIMER perché viene fatto nello schedule
-	
-    // TODO: trovare qualcosa come memcpy
     memcpy(&current_process->p_s, (state_t *)BIOSDATAPAGE, sizeof(state_t));
     // add time passed to the process that has finished its timeslice
     // TODO: controllare senso di aggiungere arbitrariamente
@@ -85,9 +82,13 @@ void handleDeviceInterrupt(unsigned short device_number) {
         status = controller->dtp.status;
         controller->dtp.command = ACK;
     }
-    // TODO: uso syscall o direttamente la funzione?
+    // TODO: chiamare direttamente la funzione, non usare una SYSCALL da qui
     if (!emptyProcQ(&blocked_pcbs[device_number][controller_number])) {
-        ssi_answer_do_io_t payload = {.status = status & STATUS_MASK, .device = device_number, .controller = controller_number};
+        ssi_unblock_do_io_t ssi_unblock_process = {.status = status & STATUS_MASK, .device = device_number, .controller = controller_number};
+        ssi_payload_t payload = {
+            .service_code = UNBLOCKPROCESS,
+            .arg = &ssi_unblock_process,
+        }; 
         SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)&payload, 0);
     }
 }

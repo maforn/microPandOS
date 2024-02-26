@@ -1,4 +1,3 @@
-// TODO:  This module implements the TLB, Program Trap, and SYSCALL exception handlers. Furthermore, this module will contain the provided skeleton TLB-Refill event handler (e.g. uTLB_RefillHandler).
 #include "./headers/exceptions.h"
 #include "./headers/initial.h"
 #include "./headers/interrupts.h"
@@ -22,22 +21,17 @@ void exceptionHandler() {
 		if (cause == IL_TIMER)  // interval timer
 			handleIntervalTimer();
 		else if (cause == IL_CPUTIMER)  // PLT timer
-			handlePLT();
-		else if (cause == IL_DISK) { // Disk Device
+			handleLocalTimer();
+		else if (cause == IL_DISK) // Disk Device
 			handleDeviceInterrupt(IL_DISK - DEV_IL_START);
-		}
-		else if (cause == IL_FLASH) { // Flash Device
+		else if (cause == IL_FLASH) // Flash Device
 			handleDeviceInterrupt(IL_FLASH - DEV_IL_START);
-		}
-		else if (cause == IL_ETHERNET) {
+		else if (cause == IL_ETHERNET)
 			handleDeviceInterrupt(IL_ETHERNET - DEV_IL_START);
-		}
-		else if (cause == IL_PRINTER) {
+		else if (cause == IL_PRINTER) 
 			handleDeviceInterrupt(IL_PRINTER - DEV_IL_START);
-		}
-		else if (cause == IL_TERMINAL) {
+		else if (cause == IL_TERMINAL) 
 			handleDeviceInterrupt(IL_TERMINAL - DEV_IL_START);
-		}
 	}
 	else {
 		if (cause >= 8 && cause <= 11) { // Syscall

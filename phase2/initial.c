@@ -45,7 +45,6 @@ int main() {
 	mkEmptyProcQ(&waiting_IT);
 
 	// (5)
-	// TODO: controllare sia la funzione giusta (presa da const.h)
 	LDIT(PSECOND);
 
 	// (6)
