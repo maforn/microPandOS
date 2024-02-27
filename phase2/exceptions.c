@@ -51,9 +51,6 @@ stored at the start of the BIOS Data Page (0x0FFF.F000) [Section 3.2.2-pops].*/
 			// TODO: find RI
 			setCAUSE(2);
 			exceptionHandler();
-			// TODO: find RI
-			setCAUSE(2);
-			exceptionHandler();
 			}
 			else {
 				// TODO: is the PC update necessary in every case? 
