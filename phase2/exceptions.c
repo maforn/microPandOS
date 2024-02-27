@@ -97,6 +97,7 @@ void sendMessage(state_t *proc_state){
 		(dst->p_s).reg_a0 = (memaddr)current_process;
 			
 		// awake receveing process and update count
+		outProcQ(&waiting_MSG, dst);
 		insertProcQ(&ready_queue, dst); 
 		soft_block_count--;
 
@@ -118,9 +119,7 @@ void sendMessage(state_t *proc_state){
 		}
 	}
 
-	// update current process state and resume execution
-	memcpy(&current_process->p_s, proc_state, sizeof(state_t));
-	LDST(&current_process->p_s);
+	resumeExecution(proc_state);
 }
 
 void receiveMessage(state_t *proc_state){
@@ -142,8 +141,12 @@ void receiveMessage(state_t *proc_state){
 		proc_state->reg_a0 = (memaddr)msg->m_sender;
 		freeMsg(msg);
 
-		// update current process state and resume execution
-		memcpy(&current_process->p_s, proc_state, sizeof(state_t));
-		LDST(&current_process->p_s);
+		resumeExecution(proc_state);
 	}
+}
+
+void resumeExecution(state_t* proc_state){
+	// update current process state and resume execution
+	memcpy(&current_process->p_s, proc_state, sizeof(state_t));
+	LDST(&current_process->p_s);
 }
