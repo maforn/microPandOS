@@ -113,6 +113,7 @@ void sendMessage(state_t *proc_state){
 	}
 }
 
+// TODO: controllare senso si memcpy
 void receiveMessage(state_t *proc_state){
 	pcb_t *sender = (pcb_t *)proc_state->reg_a1;
 	msg_t *msg = popMessage(&current_process->msg_inbox, sender);

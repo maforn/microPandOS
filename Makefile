@@ -28,6 +28,7 @@ kernel.core.uriscv : kernel
 
 # kernel : ./phase1/msg.o ./phase1/pcb.o ./phase2/p2test.o ./phase2/exceptions.o ./phase2/initial.o  crtso.o liburiscv.o
 kernel : ./phase1/msg.o ./phase1/pcb.o ./phase2/initial.o ./phase2/ssi.o ./phase2/exceptions.o ./phase2/scheduler.o ./phase2/interrupts.o ./phase2/utils.o crtso.o liburiscv.o
+#kernel : ./phase1/msg.o ./phase1/pcb.o ./phase2/initial.o ./phase2/ssi.o ./phase2/exceptions.o ./phase2/scheduler.o ./phase2/interrupts.o ./phase2/utils.o ./phase2/p2test.o crtso.o liburiscv.o
 	$(LD) -o $@ $^ $(LDFLAGS)
 
 clean :

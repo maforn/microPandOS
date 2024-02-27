@@ -19,27 +19,7 @@ pcb_t *ssi_pcb;
 
 //extern void test();
 void test() {
-
 	while(1){}
-
-	// test msg
-	/*
-	pcb_PTR test_pcb = current_process;
-
-	unsigned int payload = 15;
-	unsigned int dst = 0;
-
-    // test send and receive
-	SYSCALL(SENDMESSAGE, (unsigned int)test_pcb, (memaddr)&payload, 0);
-    pcb_PTR sender = (pcb_PTR)SYSCALL(RECEIVEMESSAGE, ANYMESSAGE, (memaddr)&dst, 0);
-
-		if (sender != test_pcb)
-        	PANIC();
-		if (dst != (memaddr)&payload)
-			PANIC();
-
-	SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (memaddr)5, 0);
-	*/
 }
 
 int main() {
