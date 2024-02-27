@@ -56,3 +56,4 @@ Mkfile.old
 dkms.conf
 kernel
 kernel*
+term0.uriscv

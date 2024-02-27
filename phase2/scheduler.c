@@ -4,10 +4,9 @@
 #include <uriscv/liburiscv.h>
 
 void schedule() {
-
 	if (emptyProcQ(&ready_queue)) {
 		// TODO: Controllare se è così che si controlla che SSI è l'unico vivo
-		if (process_count == 1 && current_process->p_s.reg_sp == (memaddr)SSI_function_entry_point)
+		if (process_count == 1 && current_process == ssi_pcb)
 			HALT();
 		else if (process_count > 0 && soft_block_count > 0) {
 			// TODO: CONTROLLARE correttezza
@@ -23,6 +22,5 @@ void schedule() {
 
 	current_process = removeProcQ(&ready_queue);
 	setTIMER(TIMESLICE);
-	// Andrebbe passato come pointer, è corretto?
 	LDST(&(current_process->p_s));
 }
