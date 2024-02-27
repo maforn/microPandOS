@@ -58,6 +58,7 @@ int main() {
 		for (int e = 0; e < DEVPERINT; e++)
 			mkEmptyProcQ(&blocked_pcbs[i][e]);
 	}
+	mkEmptyProcQ(&waiting_IT);
 	mkEmptyProcQ(&waiting_MSG);
 
 	// (5)
