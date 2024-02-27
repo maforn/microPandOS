@@ -54,9 +54,9 @@ int main() {
 	process_count = 0;
 	soft_block_count = 0;
 	mkEmptyProcQ(&ready_queue);
-	for (int i = 0; i < SEMDEVLEN; i++) {
-		mkEmptyProcQ(&blocked_pcbs[i][0]);
-		mkEmptyProcQ(&blocked_pcbs[i][1]);
+	for (int i = 0; i < DEVINTNUM; i++) {
+		for (int e = 0; e < DEVPERINT; e++)
+			mkEmptyProcQ(&blocked_pcbs[i][e]);
 	}
 	mkEmptyProcQ(&waiting_MSG);
 
