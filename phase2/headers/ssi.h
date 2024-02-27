@@ -14,4 +14,6 @@ typedef struct ssi_unblock_do_io {
 
 void SSI_function_entry_point();
 
+void terminateProcess(pcb_t *arg);
+
 #endif

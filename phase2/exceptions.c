@@ -3,8 +3,10 @@
 #include "./headers/interrupts.h"
 #include "./headers/scheduler.h"
 #include "./headers/utils.h"
+#include "./headers/ssi.h"
 #include <uriscv/liburiscv.h>
 #include <uriscv/arch.h>
+// TODO: controllare gli include
 #include <uriscv/types.h>
 #include "../phase1/headers/msg.h"
 
@@ -15,6 +17,19 @@ void uTLB_RefillHandler() {
 	LDST((state_t*) 0x0FFFF000);
 }
 
+void passUpOrDie(int excType) {
+	// terminate process and its progeny
+	if (current_process->p_supportStruct == NULL) {
+		terminateProcess(current_process);
+	}
+	else { // pass up
+		state_t *proc_state = (state_t*) BIOSDATAPAGE;
+		support_t *support_struct = current_process->p_supportStruct;
+		support_struct->sup_exceptState[excType] = *proc_state;
+		LDCXT(support_struct->sup_exceptContext[excType].stackPtr, support_struct->sup_exceptContext[excType].status, support_struct->sup_exceptContext[excType].pc);
+	}
+}
+
 void exceptionHandler() {
 	unsigned int cause = getCAUSE();
 	// if the first bit is 1 it's an interrupt
@@ -22,6 +37,8 @@ void exceptionHandler() {
 		cause &= !INTERRUPT_BIT; // remove the interrupt bit so we can get the cause without the additional bit
 		if (cause == IL_TIMER)  // interval timer
 			handleIntervalTimer();
+		else if (cause == 7) // PLT timer
+			handlePLT();
 		else if (cause == IL_CPUTIMER)  // PLT timer
 			handleLocalTimer();
 		else if (cause == IL_DISK) // Disk Device
@@ -36,7 +53,11 @@ void exceptionHandler() {
 			handleDeviceInterrupt(IL_TERMINAL - DEV_IL_START);
 	}
 	else {
-		if (cause >= 8 && cause <= 11) { // Syscall
+		// Trap
+		if ((cause >= 0 && cause <= 7) || (cause >= 11 && cause <= 24)) {
+			passUpOrDie(GENERALEXCEPT);
+		}
+		else if (cause >= 8 && cause <= 11) { // Syscall
 			state_t *proc_state  = (state_t *)BIOSDATAPAGE;
 			if (!(proc_state->status & STATUS_MPP_ON)) { // user mode
 				// TODO: find RI
@@ -53,12 +74,21 @@ void exceptionHandler() {
 				}
 				else if (proc_state->reg_a0 == RECEIVEMESSAGE)
 					receiveMessage(proc_state);
-				else{
+				/*TODO: else or else if?
+        else{
 					// Pass up
+				}*/
+				else if (proc_state->reg_a0 >= 1) {
+					passUpOrDie(GENERALEXCEPT);
 				}
 			}
 		}
+		// TLB exceptions
+		else if (cause >= 24 && cause <= 28) {
+			passUpOrDie(PGFAULTEXCEPT);
+		}
 	}
+
 	/* Interrupt Exception code Description
 	1 3 Interval Timer
 	1 7 PLT Timer
