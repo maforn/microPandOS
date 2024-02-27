@@ -9,6 +9,7 @@ struct list_head ready_queue;
 pcb_t *current_process;
 struct list_head blocked_pcbs[DEVINTNUM][DEVPERINT];
 struct list_head waiting_IT;
+struct list_head waiting_MSG;
 pcb_t *ssi_pcb;
 // TODO: Blocked PCBs controllare la correttezza
 
@@ -53,11 +54,10 @@ int main() {
 	process_count = 0;
 	soft_block_count = 0;
 	mkEmptyProcQ(&ready_queue);
-	for (int i = 0; i < DEVINTNUM; i++) {
-		for (int e = 0; e < DEVPERINT; e++)
-			mkEmptyProcQ(&blocked_pcbs[i][e]);
+	for (int i = 0; i < SEMDEVLEN; i++) {
+		mkEmptyProcQ(&blocked_pcbs[i][0]);
+		mkEmptyProcQ(&blocked_pcbs[i][1]);
 	}
-	mkEmptyProcQ(&waiting_IT);
 
 	// (5)
 	LDIT(PSECOND);
