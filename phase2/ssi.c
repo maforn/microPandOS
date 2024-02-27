@@ -15,6 +15,14 @@ void unblockProcessDevice(ssi_unblock_do_io_t *do_io);
 
 void SSIRequest(pcb_t* sender, int service, void* arg);
 
+void getCPUTime(pcb_t* sender);
+
+void waitForClock(pcb_t*sender);
+
+void getSupportData(pcb_t*sender);
+
+void getProcessID(pcb_t*sender);
+
 void SSI_function_entry_point() {
 
 	while (1) {
@@ -78,6 +86,25 @@ void unblockProcessFromDevice(ssi_unblock_do_io_t *do_io) {
 	SYSCALL(SENDMESSAGE, (unsigned int)removeProcQ(&blocked_pcbs[do_io->device][do_io->controller]), (unsigned int)do_io->status, 0);
 }
 
+void getCPUTime(pcb_t* sender){
+    SYSCALL(SENDMESSAGE, (unsigned int)sender, (unsigned int)sender->p_time, 0);
+}
+
+void waitForClock(pcb_t* sender){
+    //TODO: il processo che manda una waitForClock si aspetta un massaggio di risposta, quindi finirà nella coda dei processi che aspettano una risposta, quando verrà sbloccato dell'intervaltimer starà ancora aspettando di ricevere una risposta
+    outProcQ(&ready_queue, sender);
+    insertProcQ(&waiting_IT, sender);
+    soft_block_count++;
+   }
+
+void getSupportData(pcb_t*sender){
+    SYSCALL(SENDMESSAGE, (unsigned int)sender, (unsigned int)sender->p_supportStruct, 0);
+}
+
+void getProcessID(pcb_t*sender){
+    SYSCALL(SENDMESSAGE, (unsigned int)sender, (unsigned int)sender->p_pid, 0);
+}
+
 void SSIRequest(pcb_t* sender, int service, void* arg) {
 	switch (service) {
 		case CREATEPROCESS:
@@ -94,16 +121,16 @@ void SSIRequest(pcb_t* sender, int service, void* arg) {
 			doIO(sender, arg);
 			break;
 		case GETTIME:
-
+            getCPUTime(sender);
 			break;
 		case CLOCKWAIT:
-
+            waitForClock(sender);
 			break;
 		case GETSUPPORTPTR:
-
+            getSupportData(sender);
 			break;
 		case GETPROCESSID:
-
+            getProcessID(sender);
 			break;
 		case UNBLOCKPROCESS:
 			unblockProcessFromDevice(arg);
