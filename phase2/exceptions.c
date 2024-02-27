@@ -5,6 +5,8 @@
 #include "./headers/utils.h"
 #include <uriscv/liburiscv.h>
 #include <uriscv/arch.h>
+#include <uriscv/types.h>
+#include "../phase1/headers/msg.h"
 
 void uTLB_RefillHandler() {
 	setENTRYHI(0x80000000);
@@ -46,13 +48,20 @@ requested in user-mode. This is done by setting Cause.ExcCode in the stored exce
 (Reserved Instruction), and calling one’s Program Trap exception handler.
 Technical Point: As described above [Section 4], the saved exception state (for Processor 0) is
 stored at the start of the BIOS Data Page (0x0FFF.F000) [Section 3.2.2-pops].*/
+			// TODO: find RI
+			setCAUSE(2);
+			exceptionHandler();
 			}
 			else {
-				if (proc_state->reg_a0 == SENDMESSAGE) {
-					
-				}
-				else if (proc_state->reg_a0 == RECEIVEMESSAGE) {
+				// TODO: is the PC update necessary in every case? 
+				proc_state->pc_epc += 4;
 
+				if (proc_state->reg_a0 == SENDMESSAGE)
+					sendMessage(proc_state);
+				else if (proc_state->reg_a0 == RECEIVEMESSAGE)
+					receiveMessage(proc_state);
+				else{
+					// Pass up
 				}
 			}
 		}
@@ -69,4 +78,75 @@ stored at the start of the BIOS Data Page (0x0FFF.F000) [Section 3.2.2-pops].*/
 	0 8-11 Syscall
 	0 24-28 TLB exceptions */
 
+}
+
+void sendMessage(state_t *proc_state){
+	pcb_t *dst = (pcb_t *)proc_state->reg_a1;
+
+	// dst doesn't exist
+	if(isFree(&dst->p_list)){
+		proc_state->reg_a0 = DEST_NOT_EXIST; //failed
+	}
+	// dst is waiting for a message from current process
+	else if(contains(&waiting_MSG, &dst->p_list)
+			&& ((dst->p_s).reg_a1 == ANYMESSAGE || (pcb_t*)(dst->p_s).reg_a1 == current_process)){
+
+		// copy message and sender in designated memory areas
+		if ((void *)(dst->p_s).reg_a2 != NULL)
+			memcpy((memaddr*)(dst->p_s).reg_a2, &(proc_state->reg_a2), sizeof(memaddr));
+		(dst->p_s).reg_a0 = (memaddr)current_process;
+			
+		// awake receveing process and update count
+		outProcQ(&waiting_MSG, dst);
+		insertProcQ(&ready_queue, dst); 
+		soft_block_count--;
+
+		proc_state->reg_a0 = 0; // success
+	}
+	else{ // dst is in ready queue or (waiting for I/O or timer) or waiting for message from different sender
+		msg_t *msg = allocMsg();
+
+		if(msg == NULL){ // no available messages
+			proc_state->reg_a0 = MSGNOGOOD; // failed
+		}
+		else{
+			// add message to dst inbox
+			msg->m_payload = proc_state->reg_a2; 
+			msg->m_sender = current_process;
+
+			pushMessage(&dst->msg_inbox, msg);
+			proc_state->reg_a0 = 0; // success
+		}
+	}
+
+	resumeExecution(proc_state);
+}
+
+void receiveMessage(state_t *proc_state){
+	pcb_t *sender = (pcb_t *)proc_state->reg_a1;
+	msg_t *msg = popMessage(&current_process->msg_inbox, sender);
+
+	if (msg == NULL){
+		// TODO: save processor state and update CPU time
+	 	memcpy(&current_process->p_s, proc_state, sizeof(state_t));
+
+		// block process
+		insertProcQ(&waiting_MSG, current_process);
+		schedule();
+	}
+	else{
+		// transfer data
+		if((void *)proc_state->reg_a2 != NULL)
+			memcpy((memaddr*)proc_state->reg_a2, &(msg->m_payload), sizeof(memaddr));
+		proc_state->reg_a0 = (memaddr)msg->m_sender;
+		freeMsg(msg);
+
+		resumeExecution(proc_state);
+	}
+}
+
+void resumeExecution(state_t* proc_state){
+	// update current process state and resume execution
+	memcpy(&current_process->p_s, proc_state, sizeof(state_t));
+	LDST(&current_process->p_s);
 }

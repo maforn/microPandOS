@@ -16,11 +16,24 @@ void unblockProcessDevice(ssi_unblock_do_io_t *do_io);
 void SSIRequest(pcb_t* sender, int service, void* arg);
 
 void SSI_function_entry_point() {
+
 	while (1) {
 		ssi_payload_t payload;
 		pcb_t *sender = (pcb_t *)SYSCALL(RECEIVEMESSAGE, ANYMESSAGE, (unsigned int)&payload, 0);
 		SSIRequest(sender, payload.service_code, &payload.arg);
 	}
+
+	/* TEST MSG
+	while (1) {
+		//ssi_payload_t payload;
+		unsigned int payload;
+		SYSCALL(RECEIVEMESSAGE, ANYMESSAGE, (unsigned int)&payload, 0);
+
+		if(payload != 5)
+			PANIC();
+		//SSIRequest(sender, payload.service_code, &payload.arg);
+	}
+	*/
 }
 
 int createProcess(pcb_t * sender, ssi_create_process_t *arg) {

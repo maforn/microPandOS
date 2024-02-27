@@ -1,5 +1,6 @@
 #include "../phase1/headers/msg.h"
 #include "./headers/initial.h"
+#include <uriscv/liburiscv.h>
 
 // (1)
 // In the header file
@@ -8,6 +9,7 @@ struct list_head ready_queue;
 pcb_t *current_process;
 struct list_head blocked_pcbs[DEVINTNUM][DEVPERINT];
 struct list_head waiting_IT;
+struct list_head waiting_MSG;
 pcb_t *ssi_pcb;
 // TODO: Blocked PCBs controllare la correttezza
 
@@ -17,7 +19,27 @@ pcb_t *ssi_pcb;
 
 //extern void test();
 void test() {
-	while (1) {}
+
+	while(1){}
+
+	// test msg
+	/*
+	pcb_PTR test_pcb = current_process;
+
+	unsigned int payload = 15;
+	unsigned int dst = 0;
+
+    // test send and receive
+	SYSCALL(SENDMESSAGE, (unsigned int)test_pcb, (memaddr)&payload, 0);
+    pcb_PTR sender = (pcb_PTR)SYSCALL(RECEIVEMESSAGE, ANYMESSAGE, (memaddr)&dst, 0);
+
+		if (sender != test_pcb)
+        	PANIC();
+		if (dst != (memaddr)&payload)
+			PANIC();
+
+	SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (memaddr)5, 0);
+	*/
 }
 
 int main() {
@@ -43,6 +65,7 @@ int main() {
 			mkEmptyProcQ(&blocked_pcbs[i][e]);
 	}
 	mkEmptyProcQ(&waiting_IT);
+	mkEmptyProcQ(&waiting_MSG);
 
 	// (5)
 	LDIT(PSECOND);

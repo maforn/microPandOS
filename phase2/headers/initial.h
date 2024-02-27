@@ -8,6 +8,7 @@ extern struct list_head ready_queue;
 extern pcb_t *current_process;
 extern struct list_head blocked_pcbs[DEVINTNUM][DEVPERINT];
 extern struct list_head waiting_IT;
+extern struct list_head waiting_MSG;
 extern pcb_t *ssi_pcb;
 
 #define STATUS_MPP_ON (3 << 11)
