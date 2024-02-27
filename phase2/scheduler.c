@@ -22,5 +22,5 @@ void schedule() {
 
 	current_process = removeProcQ(&ready_queue);
 	setTIMER(TIMESLICE);
-	LDST(&(current_process->p_s));
+		LDST(&(current_process->p_s));
 }

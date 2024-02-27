@@ -3,10 +3,18 @@
 #include "./headers/utils.h"
 #include "./headers/interrupts.h"
 #include "./headers/ssi.h"
+#include "./headers/exceptions.h"
 #include <uriscv/liburiscv.h>
 #include <uriscv/arch.h>
 
 extern pcb_t *ssi_pcb;
+
+void loadOrSchedule() {
+    if (current_process == NULL)
+	    schedule();
+    else
+	    LDST((state_t *)BIOSDATAPAGE);
+}
 
 void handleIntervalTimer() {
     // load the interval timer again
@@ -16,10 +24,7 @@ void handleIntervalTimer() {
         insertProcQ(&ready_queue, removeProcQ(&waiting_IT));
         soft_block_count--;
     }
-    if (current_process == NULL)
-	    schedule();
-    else
-	    LDST((state_t *)BIOSDATAPAGE);
+    loadOrSchedule();
 }
 
 void handleLocalTimer() {
@@ -84,17 +89,23 @@ void handleDeviceInterrupt(unsigned short device_number) {
         status = controller->dtp.status;
         controller->dtp.command = ACK;
     }
-    // TODO: chiamare direttamente la funzione, non usare una SYSCALL da qui
+    
     if (!emptyProcQ(&blocked_pcbs[device_number][controller_number])) {
-        ssi_unblock_do_io_t ssi_unblock_process = {.status = status & STATUS_MASK, .device = device_number, .controller = controller_number};
+        ssi_unblock_do_io_t ssi_unblock_process;
+        ssi_unblock_process.status = status & STATUS_MASK;
+        ssi_unblock_process.device = device_number;
+        ssi_unblock_process.controller = controller_number;
         ssi_payload_t payload = {
             .service_code = UNBLOCKPROCESS,
             .arg = &ssi_unblock_process,
-        }; 
-        SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)&payload, 0);
+        };
+        state_t custom_state;
+        custom_state.reg_a0 = SENDMESSAGE;
+        custom_state.reg_a1 = (unsigned int)ssi_pcb;
+        custom_state.reg_a2 = (unsigned int)&payload;
+        sendMessage(&custom_state);
+        // TODO: cosa facciamo se non riesce a mandare i messaggi a ssi_pcb?
+        if (custom_state.reg_a0 == MSGNOGOOD) {}
     }
-    if (current_process == NULL)
-        schedule();
-    else
-        LDST((state_t*)BIOSDATAPAGE);
+    loadOrSchedule();
 }

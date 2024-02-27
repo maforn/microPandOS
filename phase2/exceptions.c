@@ -39,25 +39,18 @@ void exceptionHandler() {
 		if (cause >= 8 && cause <= 11) { // Syscall
 			state_t *proc_state  = (state_t *)BIOSDATAPAGE;
 			if (!(proc_state->status & STATUS_MPP_ON)) { // user mode
-				/*The above two Nucleus services are considered privileged services and are only available to processes
-executing in kernel-mode. Any attempt to request one of these services while in user-mode should
-trigger a Program Trap exception response.
-6
-In particular the Nucleus should simulate a Program Trap exception when a privileged service is
-requested in user-mode. This is done by setting Cause.ExcCode in the stored exception state to RI
-(Reserved Instruction), and calling one’s Program Trap exception handler.
-Technical Point: As described above [Section 4], the saved exception state (for Processor 0) is
-stored at the start of the BIOS Data Page (0x0FFF.F000) [Section 3.2.2-pops].*/
-			// TODO: find RI
-			setCAUSE(2);
-			exceptionHandler();
+				// TODO: find RI
+				setCAUSE(2);
+				exceptionHandler();
 			}
 			else {
 				// TODO: is the PC update necessary in every case? 
 				proc_state->pc_epc += 4;
 
-				if (proc_state->reg_a0 == SENDMESSAGE)
+				if (proc_state->reg_a0 == SENDMESSAGE) {
 					sendMessage(proc_state);
+					resumeExecution(proc_state);
+				}
 				else if (proc_state->reg_a0 == RECEIVEMESSAGE)
 					receiveMessage(proc_state);
 				else{
@@ -118,8 +111,6 @@ void sendMessage(state_t *proc_state){
 			proc_state->reg_a0 = 0; // success
 		}
 	}
-
-	resumeExecution(proc_state);
 }
 
 void receiveMessage(state_t *proc_state){
