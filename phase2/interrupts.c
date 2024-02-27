@@ -1,4 +1,3 @@
-// TODO: This module implements the device/timer interrupt exception handler. This module will process all the device/timer interrupts, converting device/timer interrupts into appropriate messages for the blocked PCBs
 #include "./headers/initial.h"
 #include "./headers/scheduler.h"
 #include "./headers/utils.h"
@@ -91,4 +90,8 @@ void handleDeviceInterrupt(unsigned short device_number) {
         }; 
         SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)&payload, 0);
     }
+    if (current_process == NULL)
+        schedule();
+    else
+        LDST((state_t*)BIOSDATAPAGE);
 }
