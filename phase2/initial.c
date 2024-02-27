@@ -19,6 +19,11 @@ pcb_t *ssi_pcb;
 
 //extern void test();
 void test() {
+
+	while(1){}
+
+	// test msg
+	/*
 	pcb_PTR test_pcb = current_process;
 
 	unsigned int payload = 15;
@@ -34,6 +39,7 @@ void test() {
 			PANIC();
 
 	SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (memaddr)5, 0);
+	*/
 }
 
 int main() {
