@@ -16,7 +16,10 @@ void handleIntervalTimer() {
         insertProcQ(&ready_queue, removeProcQ(&waiting_IT));
         soft_block_count--;
     }
-    LDST((state_t *)BIOSDATAPAGE);
+    if (current_process == NULL)
+	    schedule();
+    else
+	    LDST((state_t *)BIOSDATAPAGE);
 }
 
 void handleLocalTimer() {
