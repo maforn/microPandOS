@@ -38,7 +38,7 @@ void exceptionHandler() {
 		if (cause == IL_TIMER)  // interval timer
 			handleIntervalTimer();
 		else if (cause == 7) // PLT timer
-			handlePLT();
+			handleLocalTimer();
 		else if (cause == IL_CPUTIMER)  // PLT timer
 			handleLocalTimer();
 		else if (cause == IL_DISK) // Disk Device
