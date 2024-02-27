@@ -7,6 +7,7 @@ int process_count, soft_block_count;
 struct list_head ready_queue;
 pcb_t *current_process;
 struct list_head blocked_pcbs[SEMDEVLEN][2];
+struct list_head waiting_MSG;
 pcb_t *ssi_pcb;
 // TODO: Blocked PCBs controllare la correttezza
 
@@ -56,6 +57,7 @@ int main() {
 		mkEmptyProcQ(&blocked_pcbs[i][0]);
 		mkEmptyProcQ(&blocked_pcbs[i][1]);
 	}
+	mkEmptyProcQ(&waiting_MSG);
 
 	// (5)
 	// TODO: controllare sia la funzione giusta (presa da const.h)

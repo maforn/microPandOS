@@ -85,11 +85,11 @@ void sendMessage(state_t *proc_state){
 		proc_state->reg_a0 = DEST_NOT_EXIST; //failed
 	}
 	// dst is waiting for a message from current process
-	else if(contains(&blocked_pcbs[SEMDEVLEN - 1][1], &dst->p_list)
+	else if(contains(&waiting_MSG, &dst->p_list)
 			&& ((dst->p_s).reg_a1 == ANYMESSAGE || (pcb_t*)(dst->p_s).reg_a1 == current_process)){
 
 		// copy message and sender in designated memory areas
-		if ((dst->p_s).reg_a2 != NULL)
+		if ((void *)(dst->p_s).reg_a2 != NULL)
 			memcpy((memaddr*)(dst->p_s).reg_a2, &(proc_state->reg_a2), sizeof(memaddr));
 		(dst->p_s).reg_a0 = (memaddr)current_process;
 			
@@ -129,12 +129,12 @@ void receiveMessage(state_t *proc_state){
 	 	memcpy(&current_process->p_s, proc_state, sizeof(state_t));
 
 		// block process
-		insertProcQ(&blocked_pcbs[SEMDEVLEN - 1][1], current_process);
+		insertProcQ(&waiting_MSG, current_process);
 		schedule();
 	}
 	else{
 		// transfer data
-		if(proc_state->reg_a2 != NULL)
+		if((void *)proc_state->reg_a2 != NULL)
 			memcpy((memaddr*)proc_state->reg_a2, &(msg->m_payload), sizeof(memaddr));
 		proc_state->reg_a0 = (memaddr)msg->m_sender;
 		freeMsg(msg);
