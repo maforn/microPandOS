@@ -1,21 +1,25 @@
 #include "../phase1/headers/msg.h"
+#include "./headers/initial.h"
+#include <uriscv/liburiscv.h>
 
 // (1)
 // In the header file
 int process_count, soft_block_count;
 struct list_head ready_queue;
 pcb_t *current_process;
-struct list_head blocked_pcbs[SEMDEVLEN][2];
+struct list_head blocked_pcbs[DEVINTNUM][DEVPERINT];
+struct list_head waiting_IT;
+struct list_head waiting_MSG;
+pcb_t *ssi_pcb;
 // TODO: Blocked PCBs controllare la correttezza
 
-#include "./headers/initial.h"
 #include "./headers/scheduler.h"
 #include "./headers/exceptions.h"
 #include "./headers/ssi.h"
 
 //extern void test();
 void test() {
-	while (1) {}
+	while(1){}
 }
 
 int main() {
@@ -36,29 +40,30 @@ int main() {
 	process_count = 0;
 	soft_block_count = 0;
 	mkEmptyProcQ(&ready_queue);
-	for (int i = 0; i < SEMDEVLEN; i++) {
-		mkEmptyProcQ(&blocked_pcbs[i][0]);
-		mkEmptyProcQ(&blocked_pcbs[i][1]);
+	for (int i = 0; i < DEVINTNUM; i++) {
+		for (int e = 0; e < DEVPERINT; e++)
+			mkEmptyProcQ(&blocked_pcbs[i][e]);
 	}
+	mkEmptyProcQ(&waiting_IT);
+	mkEmptyProcQ(&waiting_MSG);
 
 	// (5)
-	// TODO: controllare sia la funzione giusta (presa da const.h)
 	LDIT(PSECOND);
 
 	// (6)
-	pcb_t *first_process = allocPcb();
-	insertProcQ(&ready_queue, first_process);
+	ssi_pcb = allocPcb();
+	insertProcQ(&ready_queue, ssi_pcb);
 	process_count++;
-	first_process->p_s.mie = MIE_ALL;
+	ssi_pcb->p_s.mie = MIE_ALL;
 
 	// TODO: ricontrollare che sia giusto
-	first_process->p_s.status = STATUS_INTERRUPT_ON_NEXT;
+	ssi_pcb->p_s.status = STATUS_INTERRUPT_ON_NEXT;
 	// Obtain ramtop with the macro
 	memaddr ramtop;
 	RAMTOP(ramtop);
-	first_process->p_s.reg_sp = ramtop;
+	ssi_pcb->p_s.reg_sp = ramtop;
 
-	first_process->p_s.pc_epc = (memaddr)SSI_function_entry_point;
+	ssi_pcb->p_s.pc_epc = (memaddr)SSI_function_entry_point;
 	
 	// process tree to NULL already done by allocPcb()
 	// p_time = 0 by allocPcb again, as well as p_supportStruct

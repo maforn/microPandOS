@@ -54,4 +54,6 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+kernel
 kernel*
+term0.uriscv

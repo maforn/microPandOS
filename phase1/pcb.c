@@ -110,3 +110,7 @@ pcb_t* outChild(pcb_t *p) {
 	p->p_parent = NULL;
 	return p;
 }
+
+int isFree(struct list_head *elem){
+    return contains(&pcbFree_h, elem);
+}

@@ -1,25 +1,39 @@
-// TODO: This module implements the System Service Interface processo.
 #include "./headers/ssi.h"
 #include "./headers/initial.h"
 #include "./headers/scheduler.h"
 #include "./headers/utils.h"
-#include "../headers/types.h"
 #include <uriscv/liburiscv.h>
+#include <uriscv/arch.h>
 
 int createProcess(pcb_t * sender, ssi_create_process_t *arg);
 
 void terminateProcess(pcb_t *arg);
 
-unsigned int doIO(pcb_t *sender, ssi_do_io_t *arg);
+void doIO(pcb_t *sender, ssi_do_io_t *do_io);
+
+void unblockProcessDevice(ssi_unblock_do_io_t *do_io);
 
 void SSIRequest(pcb_t* sender, int service, void* arg);
 
 void SSI_function_entry_point() {
+
 	while (1) {
-		ssi_payload_t payload;
+		ssi_payload_t *payload;
 		pcb_t *sender = (pcb_t *)SYSCALL(RECEIVEMESSAGE, ANYMESSAGE, (unsigned int)&payload, 0);
-		SSIRequest(sender, payload.service_code, &payload.arg);
+		SSIRequest(sender, payload->service_code, &payload->arg);
 	}
+
+	/* TEST MSG
+	while (1) {
+		//ssi_payload_t payload;
+		unsigned int payload;
+		SYSCALL(RECEIVEMESSAGE, ANYMESSAGE, (unsigned int)&payload, 0);
+
+		if(payload != 5)
+			PANIC();
+		//SSIRequest(sender, payload.service_code, &payload.arg);
+	}
+	*/
 }
 
 int createProcess(pcb_t * sender, ssi_create_process_t *arg) {
@@ -49,10 +63,19 @@ void terminateProcess(pcb_t *arg) {
 	freePcb(arg);
 }
 
-unsigned int doIO(pcb_t *sender, ssi_do_io_t *arg) {
-	ssi_do_io_t do_io;
-	memcpy(&do_io, arg, sizeof(ssi_do_io_t));
-	return 0;
+void doIO(pcb_t *sender, ssi_do_io_t *do_io) {
+	// block the pcb: get the device and controller from the address
+	unsigned short device_number = ((unsigned int)do_io->commandAddr - START_DEVREG) / (DEVPERINT  * DEVREGSIZE);
+	unsigned short controller_number = (((unsigned int)do_io->commandAddr - START_DEVREG) / DEVREGSIZE) % DEVPERINT;
+	// save the new current status
+	memcpy(&(sender->p_s), (state_t *)BIOSDATAPAGE, sizeof(state_t));
+	insertProcQ(&blocked_pcbs[device_number][controller_number], sender);
+	// write on device address specified
+	*(do_io->commandAddr) = do_io->commandValue;
+}
+
+void unblockProcessFromDevice(ssi_unblock_do_io_t *do_io) {
+	SYSCALL(SENDMESSAGE, (unsigned int)removeProcQ(&blocked_pcbs[do_io->device][do_io->controller]), (unsigned int)do_io->status, 0);
 }
 
 void SSIRequest(pcb_t* sender, int service, void* arg) {
@@ -66,8 +89,6 @@ void SSIRequest(pcb_t* sender, int service, void* arg) {
 			terminateProcess(arg);
 			if (arg != sender)
 				SYSCALL(SENDMESSAGE, (unsigned int)sender, 0, 0);
-			else // the caller is current_process
-				schedule();
 			break;
 		case DOIO:
 			doIO(sender, arg);
@@ -83,6 +104,9 @@ void SSIRequest(pcb_t* sender, int service, void* arg) {
 			break;
 		case GETPROCESSID:
 
+			break;
+		case UNBLOCKPROCESS:
+			unblockProcessFromDevice(arg);
 			break;
 		default: // terminate process and all of its children
 			terminateProcess(sender);
