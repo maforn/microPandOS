@@ -79,11 +79,7 @@ void getCPUTime(pcb_t* sender){
 
 void waitForClock(pcb_t* sender){
     //TODO: il processo che manda una waitForClock si aspetta un massaggio di risposta, quindi finirà nella coda dei processi che aspettano una risposta, quando verrà sbloccato dell'intervaltimer starà ancora aspettando di ricevere una risposta
-    if (current_process == sender)
-        current_process=NULL;
-    else{
-        outProcQ(&ready_queue, sender);
-    }
+    outProcQ(&ready_queue, sender);
     insertProcQ(&waiting_IT, sender);
     soft_block_count++;
    }
