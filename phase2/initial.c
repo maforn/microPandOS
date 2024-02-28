@@ -17,10 +17,10 @@ pcb_t *ssi_pcb;
 #include "./headers/exceptions.h"
 #include "./headers/ssi.h"
 
-//extern void test();
-void test() {
+extern void test();
+/*void test() {
 	while(1){}
-}
+}*/
 
 int main() {
 	// ATT: per le librerie di uriscv guardare /urs/local/include/uriscv

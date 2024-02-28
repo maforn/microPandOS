@@ -20,9 +20,19 @@ void handleIntervalTimer() {
     // load the interval timer again
     LDIT(PSECOND);
     while ( !emptyProcQ( &waiting_IT ) ) {
-        // remove from waiting interval and put in ready
-        insertProcQ(&ready_queue, removeProcQ(&waiting_IT));
-        soft_block_count--;
+	// TODO: le variabili si sovrascrivono? arg è passato bene?
+        // remove from waiting interval and send unlock to ssi
+        ssi_payload_t payload = {
+            .service_code = UNBLOCKPROCESSTIMER,
+            .arg = removeProcQ(&waiting_IT)
+        };
+        state_t custom_state;
+        custom_state.reg_a0 = SENDMESSAGE;
+        custom_state.reg_a1 = (unsigned int)ssi_pcb;
+        custom_state.reg_a2 = (unsigned int)&payload;
+        sendMessage(&custom_state);
+        // TODO: cosa facciamo se non riesce a mandare i messaggi a ssi_pcb?
+        if (custom_state.reg_a0 == MSGNOGOOD) {}
     }
     loadOrSchedule();
 }
@@ -47,32 +57,6 @@ void handleDeviceInterrupt(unsigned short device_number) {
             break;
         }
     }
-    /*switch (interrupt_area & 0xff) {
-        case DEV0ON:
-            controller_number = 0;
-            break;
-        case DEV1ON:
-            controller_number = 1;
-            break;
-        case DEV2ON:
-            controller_number = 2;
-            break;
-        case DEV3ON:
-            controller_number = 3;
-            break;
-        case DEV4ON:
-            controller_number = 4;
-            break;
-        case DEV5ON:
-            controller_number = 5;
-            break;
-        case DEV6ON:
-            controller_number = 6;
-            break;
-        case DEV7ON:
-            controller_number = 7;
-            break;
-    }*/
     devreg_t *controller = (devreg_t *)DEV_REG_ADDR(device_number + DEV_IL_START, controller_number);
     unsigned short status;
     if (device_number == IL_TERMINAL - DEV_IL_START) { // it's a terminal
@@ -96,7 +80,7 @@ void handleDeviceInterrupt(unsigned short device_number) {
         ssi_unblock_process.device = device_number;
         ssi_unblock_process.controller = controller_number;
         ssi_payload_t payload = {
-            .service_code = UNBLOCKPROCESS,
+            .service_code = UNBLOCKPROCESSDEVICE,
             .arg = &ssi_unblock_process,
         };
         state_t custom_state;

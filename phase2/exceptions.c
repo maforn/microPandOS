@@ -33,12 +33,10 @@ void passUpOrDie(int excType) {
 void exceptionHandler() {
 	unsigned int cause = getCAUSE();
 	// if the first bit is 1 it's an interrupt
-	if (cause & INTERRUPT_BIT) {
-		cause &= !INTERRUPT_BIT; // remove the interrupt bit so we can get the cause without the additional bit
+	if (!!(cause & INTERRUPT_BIT)) {
+		cause &= ~INTERRUPT_BIT; // remove the interrupt bit so we can get the cause without the additional bit
 		if (cause == IL_TIMER)  // interval timer
 			handleIntervalTimer();
-		else if (cause == 7) // PLT timer
-			handleLocalTimer();
 		else if (cause == IL_CPUTIMER)  // PLT timer
 			handleLocalTimer();
 		else if (cause == IL_DISK) // Disk Device
@@ -54,7 +52,7 @@ void exceptionHandler() {
 	}
 	else {
 		// Trap
-		if ((cause >= 0 && cause <= 7) || (cause >= 11 && cause <= 24)) {
+		if ((cause >= 0 && cause <= 7) || (cause > 11 && cause <= 24)) {
 			passUpOrDie(GENERALEXCEPT);
 		}
 		else if (cause >= 8 && cause <= 11) { // Syscall
@@ -143,17 +141,20 @@ void sendMessage(state_t *proc_state){
 	}
 }
 
-// TODO: controllare senso si memcpy
+// TODO: controllare senso di memcpy
 void receiveMessage(state_t *proc_state){
 	pcb_t *sender = (pcb_t *)proc_state->reg_a1;
 	msg_t *msg = popMessage(&current_process->msg_inbox, sender);
 
 	if (msg == NULL){
 		// TODO: save processor state and update CPU time
+		current_process->p_time += (TIMESLICE - getTIMER());
 	 	memcpy(&current_process->p_s, proc_state, sizeof(state_t));
 
 		// block process
 		insertProcQ(&waiting_MSG, current_process);
+		soft_block_count++;
+		current_process = NULL;
 		schedule();
 	}
 	else{
