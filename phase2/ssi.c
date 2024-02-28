@@ -50,14 +50,13 @@ void doIO(pcb_t *sender, ssi_do_io_t *do_io) {
 	unsigned short device_number = ((unsigned int)do_io->commandAddr - START_DEVREG) / (DEVPERINT  * DEVREGSIZE);
 	unsigned short controller_number = (((unsigned int)do_io->commandAddr - START_DEVREG) / DEVREGSIZE) % DEVPERINT;
 	// save the new current status
-	memcpy(&(sender->p_s), (state_t *)BIOSDATAPAGE, sizeof(state_t));
 	insertProcQ(&blocked_pcbs[device_number][controller_number], sender);
 	// write on device address specified
 	*(do_io->commandAddr) = do_io->commandValue;
 }
 
 static inline void unblockProcessFromDevice(ssi_unblock_do_io_t *do_io) {
-	SYSCALL(SENDMESSAGE, (unsigned int)removeProcQ(&blocked_pcbs[do_io->device][do_io->controller]), (unsigned int)&do_io->status, 0);
+	SYSCALL(SENDMESSAGE, (unsigned int)removeProcQ(&blocked_pcbs[do_io->device][do_io->controller]), (unsigned int)do_io->status, 0);
 }
 
 static inline void unblockProcessFromTimer(pcb_t *process) {
