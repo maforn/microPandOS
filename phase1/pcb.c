@@ -37,6 +37,7 @@ pcb_t *allocPcb() {
     INIT_LIST_HEAD(&(p->p_sib));
     p->p_supportStruct=NULL;
     p->p_time=0;
+    p->blocked = 0;
     return p;
 }
 

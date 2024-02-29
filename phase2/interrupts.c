@@ -26,6 +26,7 @@ void handleIntervalTimer() {
             .service_code = UNBLOCKPROCESSTIMER,
             .arg = removeProcQ(&waiting_IT)
         };
+	insertProcQ(&waiting_MSG, payload.arg);
         state_t custom_state;
         custom_state.reg_a0 = SENDMESSAGE;
         custom_state.reg_a1 = (unsigned int)ssi_pcb;
@@ -39,11 +40,13 @@ void handleIntervalTimer() {
 
 void handleLocalTimer() {
     // non abbiamo chiamato setTIMER perché viene fatto nello schedule
-    memcpy(&current_process->p_s, (state_t *)BIOSDATAPAGE, sizeof(state_t));
-    // add time passed to the process that has finished its timeslice
-    // TODO: controllare senso di aggiungere arbitrariamente
-    current_process->p_time += TIMESLICE;
-    insertProcQ(&ready_queue, current_process);
+    if (current_process != NULL) {
+    	memcpy(&current_process->p_s, (state_t *)BIOSDATAPAGE, sizeof(state_t));
+    	// add time passed to the process that has finished its timeslice
+    	// TODO: controllare senso di aggiungere arbitrariamente
+    	current_process->p_time += TIMESLICE;
+    	insertProcQ(&ready_queue, current_process);
+    }
     schedule();
 }
 
@@ -77,8 +80,8 @@ void handleDeviceInterrupt(unsigned short device_number) {
     if (!emptyProcQ(&blocked_pcbs[device_number][controller_number])) {
         ssi_unblock_do_io_t ssi_unblock_process;
         ssi_unblock_process.status = status & STATUS_MASK;
-        ssi_unblock_process.device = device_number;
-        ssi_unblock_process.controller = controller_number;
+        ssi_unblock_process.process = removeProcQ(&blocked_pcbs[device_number][controller_number]);
+	insertProcQ(&waiting_MSG, ssi_unblock_process.process);
         ssi_payload_t payload = {
             .service_code = UNBLOCKPROCESSDEVICE,
             .arg = &ssi_unblock_process,

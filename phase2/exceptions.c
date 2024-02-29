@@ -119,6 +119,7 @@ void sendMessage(state_t *proc_state){
 			
 		// awake receveing process and update count
 		outProcQ(&waiting_MSG, dst);
+		dst->blocked = 0;
 		insertProcQ(&ready_queue, dst); 
 		soft_block_count--;
 
@@ -152,7 +153,10 @@ void receiveMessage(state_t *proc_state){
 	 	memcpy(&current_process->p_s, proc_state, sizeof(state_t));
 
 		// block process
-		insertProcQ(&waiting_MSG, current_process);
+		if (!current_process->blocked) {
+			insertProcQ(&waiting_MSG, current_process);
+			current_process->blocked = 1;
+		}
 		soft_block_count++;
 		current_process = NULL;
 		schedule();

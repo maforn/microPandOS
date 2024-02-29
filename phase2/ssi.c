@@ -37,7 +37,7 @@ void terminateProcess(pcb_t *arg) {
 	process_count--;
 	if (current_process == arg)
 		current_process = NULL;
-	else if (outProcQ(&ready_queue, arg) != NULL) {
+	else if (outProcQ(&ready_queue, arg) == NULL) {
 		soft_block_count--;
 		// TODO: controllare lo tiri fuori
 		list_del(&arg->p_list);
@@ -45,22 +45,28 @@ void terminateProcess(pcb_t *arg) {
 	freePcb(arg);
 }
 
+static inline void removeFromMessageQueue(pcb_t *process) {
+	outProcQ(&waiting_MSG, process);
+}
+
 void doIO(pcb_t *sender, ssi_do_io_t *do_io) {
+	removeFromMessageQueue(sender);
 	// block the pcb: get the device and controller from the address
 	unsigned short device_number = ((unsigned int)do_io->commandAddr - START_DEVREG) / (DEVPERINT  * DEVREGSIZE);
 	unsigned short controller_number = (((unsigned int)do_io->commandAddr - START_DEVREG) / DEVREGSIZE) % DEVPERINT;
 	// save the new current status
+	sender->blocked = 1;
 	insertProcQ(&blocked_pcbs[device_number][controller_number], sender);
 	// write on device address specified
 	*(do_io->commandAddr) = do_io->commandValue;
 }
 
 static inline void unblockProcessFromDevice(ssi_unblock_do_io_t *do_io) {
-	SYSCALL(SENDMESSAGE, (unsigned int)removeProcQ(&blocked_pcbs[do_io->device][do_io->controller]), (unsigned int)do_io->status, 0);
+	SYSCALL(SENDMESSAGE, (unsigned int)do_io->process, (unsigned int)do_io->status, 0);
 }
 
 static inline void unblockProcessFromTimer(pcb_t *process) {
-	SYSCALL(SENDMESSAGE, (unsigned int)outProcQ(&waiting_IT, process), 0, 0);
+	SYSCALL(SENDMESSAGE, (unsigned int)process, 0, 0);
 }
 
 static inline void getCPUTime(pcb_t* sender){
@@ -69,6 +75,8 @@ static inline void getCPUTime(pcb_t* sender){
 
 static inline void waitForClock(pcb_t* sender){
    	//TODO: il processo che manda una waitForClock si aspetta un massaggio di risposta, quindi finirà nella coda dei processi che aspettano una risposta, quando verrà sbloccato dell'intervaltimer starà ancora aspettando di ricevere una risposta
+	removeFromMessageQueue(sender);
+	sender->blocked = 1;
     	insertProcQ(&waiting_IT, sender);
 }
 
