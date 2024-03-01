@@ -62,11 +62,17 @@ void doIO(pcb_t *sender, ssi_do_io_t *do_io) {
 }
 
 static inline void unblockProcessFromDevice(ssi_unblock_do_io_t *do_io) {
-	SYSCALL(SENDMESSAGE, (unsigned int)do_io->process, (unsigned int)do_io->status, 0);
+	pcb_t *proc = removeProcQ(&blocked_pcbs[do_io->device][do_io->controller]);
+	insertProcQ(&waiting_MSG, proc);
+	SYSCALL(SENDMESSAGE, (unsigned int)proc, (unsigned int)do_io->status, 0);
 }
 
-static inline void unblockProcessFromTimer(pcb_t *process) {
-	SYSCALL(SENDMESSAGE, (unsigned int)process, 0, 0);
+static inline void unblockProcessFromTimer() {
+	while ( !emptyProcQ( &waiting_IT ) ) {
+		pcb_t* process = removeProcQ(&waiting_IT);
+		insertProcQ(&waiting_MSG, process);
+		SYSCALL(SENDMESSAGE, (unsigned int)process, 0, 0);
+	}
 }
 
 static inline void getCPUTime(pcb_t* sender){
@@ -120,7 +126,7 @@ void SSIRequest(pcb_t* sender, int service, void* arg) {
 			unblockProcessFromDevice((ssi_unblock_do_io_t*)arg);
 			break;
 		case UNBLOCKPROCESSTIMER:
-			unblockProcessFromTimer((pcb_t*)arg);
+			unblockProcessFromTimer();
 			break;
 		default: // terminate process and all of its children
 			terminateProcess(sender);

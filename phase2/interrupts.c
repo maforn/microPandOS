@@ -19,14 +19,13 @@ void loadOrSchedule() {
 void handleIntervalTimer() {
     // load the interval timer again
     LDIT(PSECOND);
-    while ( !emptyProcQ( &waiting_IT ) ) {
+    if ( !emptyProcQ( &waiting_IT ) ) {
 	// TODO: le variabili si sovrascrivono? arg è passato bene?
         // remove from waiting interval and send unlock to ssi
-        ssi_payload_t payload = {
+        static ssi_payload_t payload = {
             .service_code = UNBLOCKPROCESSTIMER,
-            .arg = removeProcQ(&waiting_IT)
+            .arg = NULL
         };
-	insertProcQ(&waiting_MSG, payload.arg);
         state_t custom_state;
         custom_state.reg_a0 = SENDMESSAGE;
         custom_state.reg_a1 = (unsigned int)ssi_pcb;
@@ -78,11 +77,11 @@ void handleDeviceInterrupt(unsigned short device_number) {
     }
     
     if (!emptyProcQ(&blocked_pcbs[device_number][controller_number])) {
-        ssi_unblock_do_io_t ssi_unblock_process;
+        static ssi_unblock_do_io_t ssi_unblock_process;
         ssi_unblock_process.status = status & STATUS_MASK;
-        ssi_unblock_process.process = removeProcQ(&blocked_pcbs[device_number][controller_number]);
-	insertProcQ(&waiting_MSG, ssi_unblock_process.process);
-        ssi_payload_t payload = {
+        ssi_unblock_process.device = device_number;
+        ssi_unblock_process.controller = controller_number;
+        static ssi_payload_t payload = {
             .service_code = UNBLOCKPROCESSDEVICE,
             .arg = &ssi_unblock_process,
         };

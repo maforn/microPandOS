@@ -8,8 +8,9 @@
 
 // TODO: check optimal solution
 typedef struct ssi_unblock_do_io {
-	pcb_t *process;
 	unsigned int status;
+	unsigned int device;
+	unsigned int controller;
 } ssi_unblock_do_io_t;
 
 void SSI_function_entry_point();
