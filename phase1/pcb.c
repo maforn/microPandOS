@@ -95,7 +95,7 @@ pcb_t* removeChild(pcb_t *p) {
 	if (list_empty(&(p->p_child))) return NULL;
 
 	// remove *p's first child
-	pcb_t* removed_child = container_of(p->p_child.next, pcb_t, p_child);
+	pcb_t* removed_child = container_of(p->p_child.next, pcb_t, p_sib);
 	list_del(p->p_child.next);
 
 	return removed_child;

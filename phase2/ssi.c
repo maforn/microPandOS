@@ -23,7 +23,7 @@ unsigned int createProcess(pcb_t * sender, ssi_create_process_t *arg) {
 	if (arg->support == NULL)
 		new_pcb->p_supportStruct = NULL;
 	else
-		memcpy(new_pcb->p_supportStruct, arg->support, sizeof(support_t));
+		new_pcb->p_supportStruct = arg->support;
 	insertChild(sender, new_pcb);
 	insertProcQ(&ready_queue, new_pcb);
 	process_count++;
@@ -32,8 +32,7 @@ unsigned int createProcess(pcb_t * sender, ssi_create_process_t *arg) {
 
 void terminateProcess(pcb_t *arg) {
 	while (!emptyProcQ(&arg->p_child))
-		terminateProcess(headProcQ(&arg->p_child));
-	outChild(arg);
+		terminateProcess(removeChild(arg));
 	process_count--;
 	if (current_process == arg)
 		current_process = NULL;
