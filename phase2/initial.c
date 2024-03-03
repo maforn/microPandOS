@@ -3,15 +3,16 @@
 #include <uriscv/liburiscv.h>
 
 // (1)
-// In the header file
+// support counting vars
 int process_count, soft_block_count;
+// queue of process that are ready to run but are not the current one
 struct list_head ready_queue;
 pcb_t *current_process;
+// the three lists for blocked pcbs
 struct list_head blocked_pcbs[DEVINTNUM][DEVPERINT];
 struct list_head waiting_IT;
 struct list_head waiting_MSG;
 pcb_t *ssi_pcb;
-// TODO: Blocked PCBs controllare la correttezza
 
 #include "./headers/scheduler.h"
 #include "./headers/exceptions.h"
@@ -24,7 +25,7 @@ extern void test();
 
 int main() {
 	// ATT: per le librerie di uriscv guardare /urs/local/include/uriscv
-	// (2)
+	// (2) set up the pass_up_vector
 	memaddr *passup_addr = (memaddr *)PASSUPVECTOR;
 	struct passupvector *pass_up_vector = (struct passupvector *)passup_addr;
 	pass_up_vector->tlb_refill_handler = (memaddr)uTLB_RefillHandler;
@@ -32,11 +33,11 @@ int main() {
 	pass_up_vector->exception_handler = (memaddr)exceptionHandler;
 	pass_up_vector->exception_stackPtr = (memaddr)KERNELSTACK;
 	
-	// (3)
+	// (3) init process and messages space
 	initPcbs();
 	initMsgs();
 
-	// (4)
+	// (4) set up the initial variables
 	process_count = 0;
 	soft_block_count = 0;
 	mkEmptyProcQ(&ready_queue);
@@ -47,28 +48,28 @@ int main() {
 	mkEmptyProcQ(&waiting_IT);
 	mkEmptyProcQ(&waiting_MSG);
 
-	// (5)
+	// (5) Load the global interval timer
 	LDIT(PSECOND);
 
-	// (6)
+	// (6) allocate first pcb: the SSI
 	ssi_pcb = allocPcb();
 	insertProcQ(&ready_queue, ssi_pcb);
 	process_count++;
+	// set all the interrupts on
 	ssi_pcb->p_s.mie = MIE_ALL;
-
 	// TODO: ricontrollare che sia giusto
 	ssi_pcb->p_s.status = STATUS_INTERRUPT_ON_NEXT;
 	// Obtain ramtop with the macro
 	memaddr ramtop;
 	RAMTOP(ramtop);
+	// set stack pointer and pc
 	ssi_pcb->p_s.reg_sp = ramtop;
-
 	ssi_pcb->p_s.pc_epc = (memaddr)SSI_function_entry_point;
 	
 	// process tree to NULL already done by allocPcb()
 	// p_time = 0 by allocPcb again, as well as p_supportStruct
 	
-	// (7)
+	// (7) allocate the second process to the test process
 	pcb_t *second_process = allocPcb();
 	insertProcQ(&ready_queue, second_process);
 	process_count++;
