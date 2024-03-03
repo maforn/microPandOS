@@ -21,6 +21,7 @@ void passUpOrDie(int excType) {
 	// terminate process and its progeny
 	if (current_process->p_supportStruct == NULL) {
 		terminateProcess(current_process);
+		schedule();
 	}
 	else { // pass up
 		state_t *proc_state = (state_t*) BIOSDATAPAGE;
@@ -136,7 +137,7 @@ void sendMessage(state_t *proc_state){
 			msg->m_payload = proc_state->reg_a2; 
 			msg->m_sender = current_process;
 
-			pushMessage(&dst->msg_inbox, msg);
+			insertMessage(&dst->msg_inbox, msg);
 			proc_state->reg_a0 = 0; // success
 		}
 	}
