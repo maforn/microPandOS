@@ -50,11 +50,13 @@ unsigned int createProcess(pcb_t * sender, ssi_create_process_t *arg) {
 */
 void terminateProcess(pcb_t *proc) {
 	// if the process has any children, kill them with the same function
-	while (!emptyProcQ(&proc->p_child))
-		terminateProcess(removeChild(proc));
+	while (!emptyProcQ(&arg->p_child)){
+		pcb_t* removedChild = container_of(arg->p_child.next, pcb_t, p_sib);
+		terminateProcess(removedChild);
+	}
 	
 	// decrease the process count and remove the specified process: if it is not the current process or in
-	// the ready queue then it's in a blocking queue. In this case decrease the soft_block_count as well 
+	// the ready queue then it's in a blocking queue. In this case decrease the soft block count as well 
 	process_count--;
 	if (current_process == proc)
 		current_process = NULL;
@@ -64,8 +66,10 @@ void terminateProcess(pcb_t *proc) {
 		// delete it from whichever queue it's in
 		list_del(&proc->p_list);
 	}
+  // detatch from parent and siblings
+	outChild(arg);
 	// free space for a new process
-	freePcb(proc);
+	freePcb(arg);
 }
 
 /**
@@ -148,10 +152,16 @@ static inline void getSupportData(pcb_t* sender){
 }
 
 /**
- * This function will return a message to the sender with its own process id.
+ * This function will return a message to the sender with its own process id if the arg is null, else
+ * it will send the sender's parent process id
 */
-static inline void getProcessID(pcb_t*sender){
-   	SYSCALL(SENDMESSAGE, (unsigned int)sender, (unsigned int)sender->p_pid, 0);
+static void getProcessID(pcb_t *sender, void *arg){
+	if (arg == NULL)
+   		SYSCALL(SENDMESSAGE, (unsigned int)sender, (unsigned int)sender->p_pid, 0);
+	else if(sender->p_parent != NULL)
+		SYSCALL(SENDMESSAGE, (unsigned int)sender, (unsigned int)sender->p_parent->p_pid, 0);
+	else
+		SYSCALL(SENDMESSAGE, (unsigned int)sender, 0, 0);
 }
 
 /**
@@ -187,7 +197,7 @@ void SSIRequest(pcb_t* sender, int service, void* arg) {
             		getSupportData(sender);
 			break;
 		case GETPROCESSID:
-	     	        getProcessID(sender);
+	     	        getProcessID(sender, arg);
 			break;
 		case UNBLOCKPROCESSDEVICE:
 			unblockProcessFromDevice((ssi_unblock_do_io_t*)arg);

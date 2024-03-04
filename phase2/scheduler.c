@@ -3,15 +3,24 @@
 #include "./headers/initial.h"
 #include <uriscv/liburiscv.h>
 
+
+// TODO: check condition
+/**
+ * This function will check if the ssi is the only process alive
+*/
+static inline int ssiOnlyProcess(){
+	return process_count == 1 && (current_process == ssi_pcb || headProcQ(&ready_queue) == ssi_pcb
+		|| (soft_block_count == 1 && ssi_pcb->blocked==1));
+}
+
 /**
  * This function will do basic checks for deadlock or waiting condition and then load the next
- * process in the ready_queue as the current one 
+ * process in the ready queue as the current one 
 */
 void schedule() {
 	if (emptyProcQ(&ready_queue)) {
 		// TODO: Controllare se è così che si controlla che SSI è l'unico vivo
-		// if there is only one process and it's the SSI, then HALT the system (test is finished)
-		if (process_count == 1 && current_process->p_pid == 0)
+		if (ssiOnlyProcess())
 			HALT();
 		// if there is no ready process and more then one are blocked, then they are waiting for an interrupt
 		else if (process_count > 0 && soft_block_count > 0) {
