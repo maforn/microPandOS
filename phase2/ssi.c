@@ -50,8 +50,8 @@ unsigned int createProcess(pcb_t * sender, ssi_create_process_t *arg) {
 */
 void terminateProcess(pcb_t *proc) {
 	// if the process has any children, kill them with the same function
-	while (!emptyProcQ(&arg->p_child)){
-		pcb_t* removedChild = container_of(arg->p_child.next, pcb_t, p_sib);
+	while (!emptyProcQ(&proc->p_child)){
+		pcb_t* removedChild = container_of(proc->p_child.next, pcb_t, p_sib);
 		terminateProcess(removedChild);
 	}
 	
@@ -66,10 +66,10 @@ void terminateProcess(pcb_t *proc) {
 		// delete it from whichever queue it's in
 		list_del(&proc->p_list);
 	}
-  // detatch from parent and siblings
-	outChild(arg);
+  	// detatch from parent and siblings
+	outChild(proc);
 	// free space for a new process
-	freePcb(arg);
+	freePcb(proc);
 }
 
 /**
