@@ -17,40 +17,55 @@ void uTLB_RefillHandler() {
 	LDST((state_t*) 0x0FFFF000);
 }
 
+/**
+ * This function will handle all the exceptions that are not implemented in phase 2: traps, 
+ * illegal syscalls and TLB exceptions. If the process that generated the exception has not got
+ * a support struct it will be terminated, else the exception will be passed up
+ * @param excType is the type of exception that is thrown, it can be either PGFAULTEXCEPT or GENERALEXCEPT
+*/
 void passUpOrDie(int excType) {
-	// terminate process and its progeny
 	if (current_process->p_supportStruct == NULL) {
+		// terminate process and its progeny
 		terminateProcess(current_process);
+		// current process was terminated, call the scheduler
 		schedule();
 	}
 	else { // pass up
+		// copy the pass up state
 		state_t *proc_state = (state_t*) BIOSDATAPAGE;
 		support_t *support_struct = current_process->p_supportStruct;
 		support_struct->sup_exceptState[excType] = *proc_state;
+		// load the context that will handle this
 		LDCXT(support_struct->sup_exceptContext[excType].stackPtr, support_struct->sup_exceptContext[excType].status, support_struct->sup_exceptContext[excType].pc);
 	}
 }
 
+/**
+ * This function is called by the kernel when an exception is thrown 
+*/
 void exceptionHandler() {
+	// get cause with macro
 	unsigned int cause = getCAUSE();
 	// if the first bit is 1 it's an interrupt
-	if (!!(cause & INTERRUPT_BIT)) {
-		cause &= ~INTERRUPT_BIT; // remove the interrupt bit so we can get the cause without the additional bit
-		if (cause == IL_TIMER)  // interval timer
+	if (cause & INTERRUPT_BIT) {
+		// remove the interrupt bit so we can get the cause without the additional bit
+		cause &= ~INTERRUPT_BIT;
+		if (cause == IL_TIMER)  // Global Interval Timer
 			handleIntervalTimer();
-		else if (cause == IL_CPUTIMER)  // PLT timer
+		else if (cause == IL_CPUTIMER) // PLT timer
 			handleLocalTimer();
-		else if (cause == IL_DISK) // Disk Device
+		else if (cause == IL_DISK)
 			handleDeviceInterrupt(IL_DISK - DEV_IL_START);
-		else if (cause == IL_FLASH) // Flash Device
+		else if (cause == IL_FLASH)
 			handleDeviceInterrupt(IL_FLASH - DEV_IL_START);
 		else if (cause == IL_ETHERNET)
 			handleDeviceInterrupt(IL_ETHERNET - DEV_IL_START);
-		else if (cause == IL_PRINTER) 
+		else if (cause == IL_PRINTER)
 			handleDeviceInterrupt(IL_PRINTER - DEV_IL_START);
-		else if (cause == IL_TERMINAL) 
+		else if (cause == IL_TERMINAL)
 			handleDeviceInterrupt(IL_TERMINAL - DEV_IL_START);
 	}
+	// not an interrupt
 	else {
 		// Trap
 		if ((cause >= 0 && cause <= 7) || (cause > 11 && cause < 24)) {
@@ -58,15 +73,19 @@ void exceptionHandler() {
 		}
 		else if (cause >= 8 && cause <= 11) { // Syscall
 			state_t *proc_state  = (state_t *)BIOSDATAPAGE;
-			if (!(proc_state->status & STATUS_MPP_ON)) { // user mode
+			// check if the process is in user mode
+			if (!(proc_state->status & STATUS_MPP_ON)) {
 				// TODO: find RI
+				// set the new cause for the exception
 				setCAUSE(2);
+				// call the function again on itself
 				exceptionHandler();
 			}
 			else {
-				// TODO: is the PC update necessary in every case? 
+				// we need to update the program counter of the caller, or it will keep calling the SYSCALL function
 				proc_state->pc_epc += 4;
 
+				// switch between types of SYSCALL
 				if (proc_state->reg_a0 == SENDMESSAGE) {
 					sendMessage(proc_state);
 					resumeExecution(proc_state);
@@ -75,14 +94,14 @@ void exceptionHandler() {
 					receiveMessage(proc_state);
 				/*TODO: else or else if?
         else{
-					// Pass up
+				// Syscalls not directly handled by the nucleus
 				}*/
 				else if (proc_state->reg_a0 >= 1) {
 					passUpOrDie(GENERALEXCEPT);
 				}
 			}
 		}
-		// TLB exceptions
+		// TLB exceptions: call pass up
 		else if (cause >= 24 && cause <= 28) {
 			passUpOrDie(PGFAULTEXCEPT);
 		}
@@ -102,18 +121,25 @@ void exceptionHandler() {
 
 }
 
+/**
+ * This function implements an asynchronous send. 
+ * It may also be called manually, so it does not contain calls to the scheduler or similar.
+ * SYCALL(a0, a1, a2, a3) will save the parameters in reg_a0, reg_a1, reg_a2 and reg_a3 (gpr[24-27])
+ * @param proc_state state of the process when interrupted, it contains the paramters with which the SYSCALL was called
+*/
 void sendMessage(state_t *proc_state){
+	// get the destination from the second parameter of the SYSCALL
 	pcb_t *dst = (pcb_t *)proc_state->reg_a1;
 
-	// dst doesn't exist
+	// dst doesn't exist: fails
 	if(isFree(&dst->p_list)){
-		proc_state->reg_a0 = DEST_NOT_EXIST; //failed
+		proc_state->reg_a0 = DEST_NOT_EXIST;
 	}
-	// dst is waiting for a message from current process
+	// dst is waiting for a message and the message is either from the current process or from anyone
 	else if(contains(&waiting_MSG, &dst->p_list)
 			&& ((dst->p_s).reg_a1 == ANYMESSAGE || (pcb_t*)(dst->p_s).reg_a1 == current_process)){
 
-		// copy message and sender in designated memory areas
+		// copy message payload and sender in designated memory areas
 		if ((void *)(dst->p_s).reg_a2 != NULL)
 			memcpy((memaddr*)(dst->p_s).reg_a2, &(proc_state->reg_a2), sizeof(memaddr));
 		(dst->p_s).reg_a0 = (memaddr)current_process;
@@ -126,10 +152,12 @@ void sendMessage(state_t *proc_state){
 
 		proc_state->reg_a0 = 0; // success
 	}
-	else{ // dst is in ready queue or (waiting for I/O or timer) or waiting for message from different sender
+	// dst is in ready queue or (waiting for I/O or timer) or waiting for message from different sender
+	else {
+		// try to alloc message
 		msg_t *msg = allocMsg();
 
-		if(msg == NULL){ // no available messages
+		if(msg == NULL){ // no available space for messages
 			proc_state->reg_a0 = MSGNOGOOD; // failed
 		}
 		else{
@@ -144,16 +172,24 @@ void sendMessage(state_t *proc_state){
 }
 
 // TODO: controllare senso di memcpy
+/**
+ * Asynchronous receive.
+ * @param proc_state state of the process when interrupted, it contains the paramters with which the SYSCALL was called
+*/
 void receiveMessage(state_t *proc_state){
 	pcb_t *sender = (pcb_t *)proc_state->reg_a1;
+	
+	// try to get a message from the inbox
 	msg_t *msg = popMessage(&current_process->msg_inbox, sender);
 
+	// if no messages are found block the process
 	if (msg == NULL){
 		// TODO: save processor state and update CPU time
+		// update the time passed during the process' timeslice and save the current state
 		current_process->p_time += (TIMESLICE - getTIMER());
 	 	memcpy(&current_process->p_s, proc_state, sizeof(state_t));
 
-		// block process
+		// block process if it is not already blocked by the ssi in waitForClock or doIO
 		if (!current_process->blocked) {
 			insertProcQ(&waiting_MSG, current_process);
 			current_process->blocked = 1;
@@ -163,16 +199,21 @@ void receiveMessage(state_t *proc_state){
 		schedule();
 	}
 	else{
-		// transfer data
+		// a message was found, transfer data
 		if((void *)proc_state->reg_a2 != NULL)
 			memcpy((memaddr*)proc_state->reg_a2, &(msg->m_payload), sizeof(memaddr));
 		proc_state->reg_a0 = (memaddr)msg->m_sender;
+
+		// free message space
 		freeMsg(msg);
 
 		resumeExecution(proc_state);
 	}
 }
 
+/**
+ * Helper function to resume the execution of the current process with the new state proc_state 
+*/
 void resumeExecution(state_t* proc_state){
 	// update current process state and resume execution
 	memcpy(&current_process->p_s, proc_state, sizeof(state_t));
