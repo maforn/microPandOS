@@ -19,12 +19,12 @@ void loadOrSchedule() {
 void handleIntervalTimer() {
     // load the interval timer again
     LDIT(PSECOND);
-    while ( !emptyProcQ( &waiting_IT ) ) {
+    if ( !emptyProcQ( &waiting_IT ) ) {
 	// TODO: le variabili si sovrascrivono? arg è passato bene?
         // remove from waiting interval and send unlock to ssi
-        ssi_payload_t payload = {
+        static ssi_payload_t payload = {
             .service_code = UNBLOCKPROCESSTIMER,
-            .arg = removeProcQ(&waiting_IT)
+            .arg = NULL
         };
         state_t custom_state;
         custom_state.reg_a0 = SENDMESSAGE;
@@ -39,11 +39,13 @@ void handleIntervalTimer() {
 
 void handleLocalTimer() {
     // non abbiamo chiamato setTIMER perché viene fatto nello schedule
-    memcpy(&current_process->p_s, (state_t *)BIOSDATAPAGE, sizeof(state_t));
-    // add time passed to the process that has finished its timeslice
-    // TODO: controllare senso di aggiungere arbitrariamente
-    current_process->p_time += TIMESLICE;
-    insertProcQ(&ready_queue, current_process);
+    if (current_process != NULL) {
+    	memcpy(&current_process->p_s, (state_t *)BIOSDATAPAGE, sizeof(state_t));
+    	// add time passed to the process that has finished its timeslice
+    	// TODO: controllare senso di aggiungere arbitrariamente
+    	current_process->p_time += TIMESLICE;
+    	insertProcQ(&ready_queue, current_process);
+    }
     schedule();
 }
 
@@ -75,11 +77,11 @@ void handleDeviceInterrupt(unsigned short device_number) {
     }
     
     if (!emptyProcQ(&blocked_pcbs[device_number][controller_number])) {
-        ssi_unblock_do_io_t ssi_unblock_process;
+        static ssi_unblock_do_io_t ssi_unblock_process;
         ssi_unblock_process.status = status & STATUS_MASK;
         ssi_unblock_process.device = device_number;
         ssi_unblock_process.controller = controller_number;
-        ssi_payload_t payload = {
+        static ssi_payload_t payload = {
             .service_code = UNBLOCKPROCESSDEVICE,
             .arg = &ssi_unblock_process,
         };

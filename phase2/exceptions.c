@@ -21,6 +21,7 @@ void passUpOrDie(int excType) {
 	// terminate process and its progeny
 	if (current_process->p_supportStruct == NULL) {
 		terminateProcess(current_process);
+		schedule();
 	}
 	else { // pass up
 		state_t *proc_state = (state_t*) BIOSDATAPAGE;
@@ -52,7 +53,7 @@ void exceptionHandler() {
 	}
 	else {
 		// Trap
-		if ((cause >= 0 && cause <= 7) || (cause > 11 && cause <= 24)) {
+		if ((cause >= 0 && cause <= 7) || (cause > 11 && cause < 24)) {
 			passUpOrDie(GENERALEXCEPT);
 		}
 		else if (cause >= 8 && cause <= 11) { // Syscall
@@ -119,6 +120,7 @@ void sendMessage(state_t *proc_state){
 			
 		// awake receveing process and update count
 		outProcQ(&waiting_MSG, dst);
+		dst->blocked = 0;
 		insertProcQ(&ready_queue, dst); 
 		soft_block_count--;
 
@@ -135,7 +137,7 @@ void sendMessage(state_t *proc_state){
 			msg->m_payload = proc_state->reg_a2; 
 			msg->m_sender = current_process;
 
-			pushMessage(&dst->msg_inbox, msg);
+			insertMessage(&dst->msg_inbox, msg);
 			proc_state->reg_a0 = 0; // success
 		}
 	}
@@ -152,7 +154,10 @@ void receiveMessage(state_t *proc_state){
 	 	memcpy(&current_process->p_s, proc_state, sizeof(state_t));
 
 		// block process
-		insertProcQ(&waiting_MSG, current_process);
+		if (!current_process->blocked) {
+			insertProcQ(&waiting_MSG, current_process);
+			current_process->blocked = 1;
+		}
 		soft_block_count++;
 		current_process = NULL;
 		schedule();
