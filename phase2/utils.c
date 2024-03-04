@@ -2,7 +2,7 @@
 #include "../headers/listx.h"
 
 /**
- * Given an head and an element, this function will return true if the element is contained in the list
+ * Given a head and an element, this function will return true if the element is contained in the list
  * pointed by the head
 */
 int contains(struct list_head *head, struct list_head *elem){
@@ -15,11 +15,10 @@ int contains(struct list_head *head, struct list_head *elem){
 }
 
 /**
- * memcpy is a standard c function that will copy char by char all the contents of a pointer to another
- * based on the size of the pointer passed with len
+ * memcpy is a standard C function that will copy memory blocks from one address to another
  * @param dest pointer to the address where memory will be copied
  * @param src pointer to the address from where memory will be copied
- * @param len number of the memory area as char that must be copied
+ * @param len number of the memory areas as char that must be copied
 */
 void *memcpy (void *dest, const void *src, unsigned int len)
 {

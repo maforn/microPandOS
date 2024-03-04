@@ -18,7 +18,7 @@ void uTLB_RefillHandler() {
 }
 
 /**
- * This function will handle all the exceptions that are not on implemented on phase 2: traps, 
+ * This function will handle all the exceptions that are not implemented in phase 2: traps, 
  * illegal syscalls and TLB exceptions. If the process that generated the exception has not got
  * a support struct it will be terminated, else the exception will be passed up
  * @param excType is the type of exception that is thrown, it can be either PGFAULTEXCEPT or GENERALEXCEPT
@@ -35,7 +35,7 @@ void passUpOrDie(int excType) {
 		state_t *proc_state = (state_t*) BIOSDATAPAGE;
 		support_t *support_struct = current_process->p_supportStruct;
 		support_struct->sup_exceptState[excType] = *proc_state;
-		// load the context what will handle this
+		// load the context that will handle this
 		LDCXT(support_struct->sup_exceptContext[excType].stackPtr, support_struct->sup_exceptContext[excType].status, support_struct->sup_exceptContext[excType].pc);
 	}
 }
@@ -94,7 +94,7 @@ void exceptionHandler() {
 					receiveMessage(proc_state);
 				/*TODO: else or else if?
         else{
-				// Illegal SYCALL: Pass up
+				// Syscalls not directly handled by the nucleus
 				}*/
 				else if (proc_state->reg_a0 >= 1) {
 					passUpOrDie(GENERALEXCEPT);
@@ -122,9 +122,8 @@ void exceptionHandler() {
 }
 
 /**
- * This function is a non-blocking SYSCALL, it will use the principles of message passing to send a
- * message to the specified destination. It may also be called manually, so it does not contain calls 
- * to the scheduler or similar.
+ * This function implements an asynchronous send. 
+ * It may also be called manually, so it does not contain calls to the scheduler or similar.
  * SYCALL(a0, a1, a2, a3) will save the parameters in reg_a0, reg_a1, reg_a2 and reg_a3 (gpr[24-27])
  * @param proc_state state of the process when interrupted, it contains the paramters with which the SYSCALL was called
 */
@@ -174,9 +173,7 @@ void sendMessage(state_t *proc_state){
 
 // TODO: controllare senso di memcpy
 /**
- * This function may be a blocking SYSCALL, it will pop the message if it is already in the inbox, else
- * it will pause the caller, waiting for the unlock from sendMessage.
- * SYCALL(a0, a1, a2, a3) will save the parameters in reg_a0, reg_a1, reg_a2 and reg_a3 (gpr[24-27])
+ * Asynchronous receive.
  * @param proc_state state of the process when interrupted, it contains the paramters with which the SYSCALL was called
 */
 void receiveMessage(state_t *proc_state){
@@ -185,7 +182,7 @@ void receiveMessage(state_t *proc_state){
 	// try to get a message from the inbox
 	msg_t *msg = popMessage(&current_process->msg_inbox, sender);
 
-	// if no messages are found block this
+	// if no messages are found block the process
 	if (msg == NULL){
 		// TODO: save processor state and update CPU time
 		// update the time passed during the process' timeslice and save the current state
@@ -206,6 +203,7 @@ void receiveMessage(state_t *proc_state){
 		if((void *)proc_state->reg_a2 != NULL)
 			memcpy((memaddr*)proc_state->reg_a2, &(msg->m_payload), sizeof(memaddr));
 		proc_state->reg_a0 = (memaddr)msg->m_sender;
+
 		// free message space
 		freeMsg(msg);
 
@@ -214,7 +212,7 @@ void receiveMessage(state_t *proc_state){
 }
 
 /**
- * Helper function to resume the execution of the current process stored with the new state proc_state 
+ * Helper function to resume the execution of the current process with the new state proc_state 
 */
 void resumeExecution(state_t* proc_state){
 	// update current process state and resume execution

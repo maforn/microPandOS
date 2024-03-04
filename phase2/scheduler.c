@@ -13,7 +13,7 @@ void schedule() {
 		// if there is only one process and it's the SSI, then HALT the system (test is finished)
 		if (process_count == 1 && current_process->p_pid == 0)
 			HALT();
-		// if there is no process and more then one are blocked then they are waiting for an interrupt
+		// if there is no ready process and more then one are blocked, then they are waiting for an interrupt
 		else if (process_count > 0 && soft_block_count > 0) {
 			// set local timer so that it does not get unlocked before the interrupt of the Interval Timer
 			setTIMER(PSECOND);
@@ -25,11 +25,12 @@ void schedule() {
 			WAIT();
 		}
 		// if there is at least one process but the ready queue is empty and no process is blocked waiting
-		// for an interrupt it's a deadlock: panic
+		// for an interrupt, it's a deadlock: panic
 		else if (process_count > 0 && soft_block_count == 0)
 			PANIC();
 	}
 
+	// get first process in ready queue
 	current_process = removeProcQ(&ready_queue);
 	// set PLT
 	setTIMER(TIMESLICE);

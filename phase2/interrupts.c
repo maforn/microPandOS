@@ -22,7 +22,7 @@ void loadOrSchedule() {
 
 /**
  * This function is called by the exceptionHandler to handle the Interval Timer interrupt:
- * if there are some process waiting (waiting_IT queue is not empty) then send a message to the
+ * if there are some processes waiting (waiting_IT queue is not empty) then it sends a message to the
  * ssi process to unlock them
  */
 void handleIntervalTimer() {
@@ -34,24 +34,29 @@ void handleIntervalTimer() {
             .service_code = UNBLOCKPROCESSTIMER,
             .arg = NULL
         };
+
         // create a custom status for the sendMessage function
         static state_t custom_state;
         custom_state.reg_a0 = SENDMESSAGE;
         custom_state.reg_a1 = (unsigned int)ssi_pcb;
         custom_state.reg_a2 = (unsigned int)&payload;
+
         // send custom message: we cannot use SYSCALL as we are already in an exception
         sendMessage(&custom_state);
+
         // TODO: cosa facciamo se non riesce a mandare i messaggi a ssi_pcb?
         if (custom_state.reg_a0 == MSGNOGOOD) {}
     }
+
+    // return control to current process or call scheduler
     loadOrSchedule();
 }
 
 
 /**
  * This function is called by the exceptionHandler to handle the Local Timer (PLT) interrupt:
- * it will update the current process status and time passed and then store it at the end of
- * the ready queue. Then it will call the scheduler to let the other process go on
+ * it will update the current process status and time passed and enqueue its pcb in
+ * the ready queue. It will then call the scheduler to pass control to other processes.
  */
 void handleLocalTimer() {
     // TODO: controllare serva l'if
@@ -61,9 +66,12 @@ void handleLocalTimer() {
 
     	// add time passed to the process that has finished its timeslice
     	current_process->p_time += TIMESLICE;
+
         // re-insert process at the end of the ready queue
     	insertProcQ(&ready_queue, current_process);
     }
+
+    // call schedule to pass control to first process in ready queue
     schedule();
 }
 
@@ -84,9 +92,11 @@ void handleDeviceInterrupt(unsigned short device_number) {
             break;
         }
     }
-    // get the controller as a device (an union between a terminal and a normal device)
+
+    // get the controller as a device (a union between a terminal and a normal device)
     devreg_t *controller = (devreg_t *)DEV_REG_ADDR(device_number + DEV_IL_START, controller_number);
     unsigned short status;
+
     // switch union based on type, then save the status and send the ACK to the controller
     if (device_number == IL_TERMINAL - DEV_IL_START) { // it's a terminal
         // the terminal has two command and status: select the one that is not busy or installed (thus 
@@ -105,27 +115,33 @@ void handleDeviceInterrupt(unsigned short device_number) {
         controller->dtp.command = ACK;
     }
     
-    // if the program that has requested the IO operation is still alive send a message to the SSI to unlock it
+    // if the program that has requested the IO operation is still alive, send a message to the SSI to unlock it
     if (!emptyProcQ(&blocked_pcbs[device_number][controller_number])) {
         // save the relevant parameters as a payload
         static ssi_unblock_do_io_t ssi_unblock_process;
         ssi_unblock_process.status = status & STATUS_MASK;
         ssi_unblock_process.device = device_number;
         ssi_unblock_process.controller = controller_number;
+
         // build the ssi payload
         static ssi_payload_t payload = {
             .service_code = UNBLOCKPROCESSDEVICE,
             .arg = &ssi_unblock_process,
         };
+
         // create a custom state for a fake sendMessage
         state_t custom_state;
         custom_state.reg_a0 = SENDMESSAGE;
         custom_state.reg_a1 = (unsigned int)ssi_pcb;
         custom_state.reg_a2 = (unsigned int)&payload;
+
         // manually send the message as we cannot use SYSCALL inside an exception
         sendMessage(&custom_state);
+
         // TODO: cosa facciamo se non riesce a mandare i messaggi a ssi_pcb?
         if (custom_state.reg_a0 == MSGNOGOOD) {}
     }
+
+    // return control to current process or call scheduler
     loadOrSchedule();
 }

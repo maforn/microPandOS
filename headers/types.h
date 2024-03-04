@@ -61,6 +61,8 @@ typedef struct pcb_t
 
     /* process id */
     int p_pid;
+
+    /* whether the process is blocked waiting for an event */
     short blocked;
 } pcb_t, *pcb_PTR;
 

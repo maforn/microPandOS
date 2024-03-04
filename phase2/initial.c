@@ -5,13 +5,19 @@
 // (1)
 // support counting vars
 int process_count, soft_block_count;
-// queue of process that are ready to run but are not the current one
+
+// queue of process that are ready to run 
 struct list_head ready_queue;
+
+// process executing at the moment
 pcb_t *current_process;
+
 // the three lists for blocked pcbs
-struct list_head blocked_pcbs[DEVINTNUM][DEVPERINT];
-struct list_head waiting_IT;
-struct list_head waiting_MSG;
+struct list_head blocked_pcbs[DEVINTNUM][DEVPERINT]; // processes waiting IO operation
+struct list_head waiting_IT; // processes waiting Interval Timer tick
+struct list_head waiting_MSG; // processes waiting a message
+
+// pcb of the System Service Iinterface
 pcb_t *ssi_pcb;
 
 #include "./headers/scheduler.h"
@@ -33,13 +39,14 @@ int main() {
 	pass_up_vector->exception_handler = (memaddr)exceptionHandler;
 	pass_up_vector->exception_stackPtr = (memaddr)KERNELSTACK;
 	
-	// (3) init process and messages space
+	// (3) init process and message spaces
 	initPcbs();
 	initMsgs();
 
 	// (4) set up the initial variables
 	process_count = 0;
 	soft_block_count = 0;
+
 	mkEmptyProcQ(&ready_queue);
 	for (int i = 0; i < DEVINTNUM; i++) {
 		for (int e = 0; e < DEVPERINT; e++)
@@ -69,7 +76,7 @@ int main() {
 	// process tree to NULL already done by allocPcb()
 	// p_time = 0 by allocPcb again, as well as p_supportStruct
 	
-	// (7) allocate the second process to the test process
+	// (7) allocate the second pcb: the test process
 	pcb_t *second_process = allocPcb();
 	insertProcQ(&ready_queue, second_process);
 	process_count++;
@@ -83,6 +90,6 @@ int main() {
 	
 
 	// (8)
-	// Call the Scheduler
+	// Call the Scheduler to start execution
 	schedule();
 }

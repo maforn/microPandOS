@@ -29,7 +29,7 @@ unsigned int createProcess(pcb_t * sender, ssi_create_process_t *arg) {
 	if (new_pcb == NULL) // no new proc allocable
 		return NOPROC;
 	
-	// copy all the camps in the arg to the new process
+	// initialize the new pcb's fields to the values specified by arg
 	memcpy(&(new_pcb->p_s), arg->state, sizeof(state_t));
 	if (arg->support == NULL)
 		new_pcb->p_supportStruct = NULL;
@@ -40,11 +40,13 @@ unsigned int createProcess(pcb_t * sender, ssi_create_process_t *arg) {
 	insertChild(sender, new_pcb);
 	insertProcQ(&ready_queue, new_pcb);
 	process_count++;
+
+	// return pointer to the pcb of the created process
 	return (unsigned int)new_pcb;
 }
 
 /**
- * This function will terminate the process and all its progeny (children) recursively
+ * This function will terminate the process and all its progeny recursively
 */
 void terminateProcess(pcb_t *proc) {
 	// if the process has any children, kill them with the same function
@@ -80,20 +82,23 @@ static inline void removeFromMessageQueue(pcb_t *process) {
 void doIO(pcb_t *sender, ssi_do_io_t *do_io) {
 	// remove the process from the waiting message queue: a pcb can stay in only one queue at a time
 	removeFromMessageQueue(sender);
+
 	// block the pcb: get the device and controller from the address
 	unsigned short device_number = ((unsigned int)do_io->commandAddr - START_DEVREG) / (DEVPERINT  * DEVREGSIZE);
 	unsigned short controller_number = (((unsigned int)do_io->commandAddr - START_DEVREG) / DEVREGSIZE) % DEVPERINT;
-	// set the status as blocked
+	
+	// block the process and insert its pcb in the appropriate waiting list
 	sender->blocked = 1;
 	insertProcQ(&blocked_pcbs[device_number][controller_number], sender);
+
 	// write command value on the device address specified as the command address
 	*(do_io->commandAddr) = do_io->commandValue;
 }
 
 
 /**
- * This function will be called with a message from the exception handler that handles devices' interrupts
- * and it will remove the process from the blocked device list, put it in the waiting_MSG list and then
+ * This function will be called with a message from the exception handler that handles devices' interrupts.
+ * It will remove the process from the blocked device list, put it in the waiting_MSG list and then
  * send a message with the device status back to the unlocked process
 */
 static inline void unblockProcessFromDevice(ssi_unblock_do_io_t *do_io) {
@@ -103,8 +108,8 @@ static inline void unblockProcessFromDevice(ssi_unblock_do_io_t *do_io) {
 }
 
 /**
- * This function will be called with a message from the exception handler that handles the Interval Timer
- * and it will remove all the processes from the waiting_IT list, put it in the waiting_MSG list and then
+ * This function will be called with a message from the exception handler that handles the Interval Timer.
+ * It will remove all the processes from the waiting_IT list, put it in the waiting_MSG list and then
  * send a message to unlock them
 */
 static inline void unblockProcessFromTimer() {
@@ -117,8 +122,8 @@ static inline void unblockProcessFromTimer() {
 }
 
 /**
- * This function will return a message to the sender with the time it has used as the active process.
- * The camp p_time is updated every time a process is stopped, be it because of a receiveMessage or 
+ * This function will send a message to the sender with the time it has used as the active process.
+ * The field p_time is updated every time a process is stopped, be it because of a receiveMessage or 
  * because of a PLT swap 
 */
 static inline void getCPUTime(pcb_t* sender){
@@ -126,8 +131,8 @@ static inline void getCPUTime(pcb_t* sender){
 }
 
 /**
- * This function will put the sender in the waiting queue, but it will first remove it from the waiting
- * message queue as a pcb cannot be in two queues at the same time
+ * This function moves the sender's pcb from the queue of processes waiting for a message
+ * to the queue of processes waiting for a clock tick.
 */
 static inline void waitForClock(pcb_t* sender){
 	removeFromMessageQueue(sender);
@@ -151,8 +156,8 @@ static inline void getProcessID(pcb_t*sender){
 
 /**
  * This function will switch between the services based on the service code and call the corresponding
- * function. If the code is invalid it will kill the process that called it (with the message).
- * @param sender the process that sent the message to the SSI that requested the service
+ * function. If the code is invalid it will kill the process that requested the invalid service.
+ * @param sender the process that sent the message to the SSI and requested the service
  * @param service the service requested to the SSI
  * @param arg the arg that is passed in the message as a parameter for the service
 */
