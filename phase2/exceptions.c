@@ -53,7 +53,7 @@ void exceptionHandler() {
 	}
 	else {
 		// Trap
-		if ((cause >= 0 && cause <= 7) || (cause > 11 && cause <= 24)) {
+		if ((cause >= 0 && cause <= 7) || (cause > 11 && cause < 24)) {
 			passUpOrDie(GENERALEXCEPT);
 		}
 		else if (cause >= 8 && cause <= 11) { // Syscall

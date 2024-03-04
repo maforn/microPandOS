@@ -31,8 +31,10 @@ unsigned int createProcess(pcb_t * sender, ssi_create_process_t *arg) {
 }
 
 void terminateProcess(pcb_t *arg) {
-	while (!emptyProcQ(&arg->p_child))
-		terminateProcess(removeChild(arg));
+	while (!emptyProcQ(&arg->p_child)){
+		pcb_t* removedChild = container_of(arg->p_child.next, pcb_t, p_sib);
+		terminateProcess(removedChild);
+	}
 	process_count--;
 	if (current_process == arg)
 		current_process = NULL;
@@ -41,6 +43,7 @@ void terminateProcess(pcb_t *arg) {
 		// TODO: controllare lo tiri fuori
 		list_del(&arg->p_list);
 	}
+	outChild(arg);
 	freePcb(arg);
 }
 
@@ -89,8 +92,13 @@ static inline void getSupportData(pcb_t* sender){
     	SYSCALL(SENDMESSAGE, (unsigned int)sender, (unsigned int)sender->p_supportStruct, 0);
 }
 
-static inline void getProcessID(pcb_t*sender){
-   	SYSCALL(SENDMESSAGE, (unsigned int)sender, (unsigned int)sender->p_pid, 0);
+static inline void getProcessID(pcb_t*sender, void* arg){
+	if (arg == NULL)
+   		SYSCALL(SENDMESSAGE, (unsigned int)sender, (unsigned int)sender->p_pid, 0);
+	else if(sender->p_parent != NULL)
+		SYSCALL(SENDMESSAGE, (unsigned int)sender, (unsigned int)sender->p_parent->p_pid, 0);
+	else
+		SYSCALL(SENDMESSAGE, (unsigned int)sender, 0, 0);
 }
 
 void SSIRequest(pcb_t* sender, int service, void* arg) {
@@ -119,7 +127,7 @@ void SSIRequest(pcb_t* sender, int service, void* arg) {
             		getSupportData(sender);
 			break;
 		case GETPROCESSID:
-	     	        getProcessID(sender);
+	     	        getProcessID(sender, arg);
 			break;
 		case UNBLOCKPROCESSDEVICE:
 			unblockProcessFromDevice((ssi_unblock_do_io_t*)arg);
