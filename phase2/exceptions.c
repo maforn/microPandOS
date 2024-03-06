@@ -49,7 +49,7 @@ void exceptionHandler() {
 	// if the first bit is 1 it's an interrupt
 	if (cause & INTERRUPT_BIT) {
 		// remove the interrupt bit so we can get the cause without the additional bit
-		cause &= ~INTERRUPT_BIT;
+		cause &= NOT_INTERRUPT_MASK;
 		if (cause == IL_TIMER)  // Global Interval Timer
 			handleIntervalTimer();
 		else if (cause == IL_CPUTIMER) // PLT timer
@@ -74,7 +74,7 @@ void exceptionHandler() {
 		else if (cause >= 8 && cause <= 11) { // Syscall
 			state_t *proc_state  = (state_t *)BIOSDATAPAGE;
 			// check if the process is in user mode
-			if (!(proc_state->status & STATUS_MPP_ON)) {
+			if (!(proc_state->status & MSTATUS_MPP_MASK)) {
 				// TODO: find RI
 				// set the new cause for the exception
 				setCAUSE(2);
@@ -106,19 +106,6 @@ void exceptionHandler() {
 			passUpOrDie(PGFAULTEXCEPT);
 		}
 	}
-
-	/* Interrupt Exception code Description
-	1 3 Interval Timer
-	1 7 PLT Timer
-	1 17 Disk Device
-	1 18 Flash Device
-	1 18 Ethernet Device
-	1 20 Printer Device
-	1 21 Termimal Device
-	0 0-7, 11-24 Trap
-	0 8-11 Syscall
-	0 24-28 TLB exceptions */
-
 }
 
 /**

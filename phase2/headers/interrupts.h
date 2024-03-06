@@ -1,7 +1,7 @@
 #ifndef INTERRUPTS_H_INCLUDED
 #define INTERRUPTS_H_INCLUDED
 
-#define STATUS_MASK 0xff
+#define STATUS_MASK 0xFF
 
 void handleIntervalTimer();
 void handleLocalTimer();

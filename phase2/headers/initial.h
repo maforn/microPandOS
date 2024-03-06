@@ -12,12 +12,9 @@ extern struct list_head waiting_MSG;
 extern pcb_t *true_ssi_pcb;
 extern pcb_t *ssi_pcb;
 
-#define STATUS_MPP_ON (3 << 11)
-#define STATUS_MPIE_ON (1 << 7)
-#define STATUS_MIE_ON (1 << 3)
 // set MPIE to 1 and MPP to 11
-#define STATUS_INTERRUPT_ON_NEXT (STATUS_MPP_ON + STATUS_MPIE_ON) 
+#define STATUS_INTERRUPT_ON_NEXT (MSTATUS_MPP_M + MSTATUS_MPIE_MASK) 
 // set MIE to 1 and MPP to 11
-#define STATUS_INTERRUPT_ON_NOW (STATUS_MPP_ON + STATUS_MIE_ON) 
+#define STATUS_INTERRUPT_ON_NOW (MSTATUS_MPP_M + MSTATUS_MIE_MASK) 
 
 #endif

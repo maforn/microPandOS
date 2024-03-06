@@ -1,7 +1,8 @@
 #ifndef EXCEPTIONS_H_INCLUDED
 #define EXCEPTIONS_H_INCLUDED
 
-#define INTERRUPT_BIT (1U << 31)
+#define INTERRUPT_BIT 0x80000000
+#define NOT_INTERRUPT_MASK 0x7FFFFFFF
 
 #include "../../headers/types.h"
 
