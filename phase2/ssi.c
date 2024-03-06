@@ -188,16 +188,16 @@ void SSIRequest(pcb_t* sender, int service, void* arg) {
 			doIO(sender, (ssi_do_io_t*)arg);
 			break;
 		case GETTIME:
-           		getCPUTime(sender);
+			getCPUTime(sender);
 			break;
 		case CLOCKWAIT:
-            		waitForClock(sender);
+			waitForClock(sender);
 			break;
 		case GETSUPPORTPTR:
-            		getSupportData(sender);
+			getSupportData(sender);
 			break;
 		case GETPROCESSID:
-	     	        getProcessID(sender, arg);
+			getProcessID(sender, arg);
 			break;
 		case UNBLOCKPROCESSDEVICE:
 			unblockProcessFromDevice((ssi_unblock_do_io_t*)arg);
