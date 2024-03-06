@@ -92,13 +92,9 @@ void exceptionHandler() {
 				}
 				else if (proc_state->reg_a0 == RECEIVEMESSAGE)
 					receiveMessage(proc_state);
-				/*TODO: else or else if?
-        else{
 				// Syscalls not directly handled by the nucleus
-				}*/
-				else if (proc_state->reg_a0 >= 1) {
+				else
 					passUpOrDie(GENERALEXCEPT);
-				}
 			}
 		}
 		// TLB exceptions: call pass up
@@ -180,7 +176,6 @@ void receiveMessage(state_t *proc_state){
 
 	// if no messages are found block the process
 	if (msg == NULL){
-		// TODO: save processor state and update CPU time
 		// update the time passed during the process' timeslice and save the current state
 		current_process->p_time += (TIMESLICE - getTIMER());
 	 	memcpy(&current_process->p_s, proc_state, sizeof(state_t));

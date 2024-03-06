@@ -19,7 +19,6 @@ static inline int ssiOnlyProcess(){
 */
 void schedule() {
 	if (emptyProcQ(&ready_queue)) {
-		// TODO: Controllare se è così che si controlla che SSI è l'unico vivo
 		if (ssiOnlyProcess())
 			HALT();
 		// if there is no ready process and more then one are blocked, then they are waiting for an interrupt

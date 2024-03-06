@@ -57,7 +57,6 @@ void handleIntervalTimer() {
  * the ready queue. It will then call the scheduler to pass control to other processes.
  */
 void handleLocalTimer() {
-    // TODO: controllare serva l'if
     if (current_process != NULL) {
         // update current process status
     	memcpy(&current_process->p_s, (state_t *)BIOSDATAPAGE, sizeof(state_t));
