@@ -17,8 +17,11 @@ struct list_head blocked_pcbs[DEVINTNUM][DEVPERINT]; // processes waiting IO ope
 struct list_head waiting_IT; // processes waiting Interval Timer tick
 struct list_head waiting_MSG; // processes waiting a message
 
-// pcb of the System Service Iinterface
-pcb_t *ssi_pcb;
+// pcb of the System Service Interface and its alias
+pcb_t *true_ssi_pcb;
+// set a memory address that is not used for anything else, as it is in kseg0 and thus used for 
+// BIOS routines, not memory
+pcb_t *ssi_pcb = (pcb_t*)42;
 
 #include "./headers/scheduler.h"
 #include "./headers/exceptions.h"
@@ -59,19 +62,19 @@ int main() {
 	LDIT(PSECOND);
 
 	// (6) allocate first pcb: the SSI
-	ssi_pcb = allocPcb();
-	insertProcQ(&ready_queue, ssi_pcb);
+	true_ssi_pcb = allocPcb();
+	insertProcQ(&ready_queue, true_ssi_pcb);
 	process_count++;
 	// set all the interrupts on
-	ssi_pcb->p_s.mie = MIE_ALL;
+	true_ssi_pcb->p_s.mie = MIE_ALL;
 	// TODO: ricontrollare che sia giusto
-	ssi_pcb->p_s.status = STATUS_INTERRUPT_ON_NEXT;
+	true_ssi_pcb->p_s.status = STATUS_INTERRUPT_ON_NEXT;
 	// Obtain ramtop with the macro
 	memaddr ramtop;
 	RAMTOP(ramtop);
 	// set stack pointer and pc
-	ssi_pcb->p_s.reg_sp = ramtop;
-	ssi_pcb->p_s.pc_epc = (memaddr)SSI_function_entry_point;
+	true_ssi_pcb->p_s.reg_sp = ramtop;
+	true_ssi_pcb->p_s.pc_epc = (memaddr)SSI_function_entry_point;
 	
 	// process tree to NULL already done by allocPcb()
 	// p_time = 0 by allocPcb again, as well as p_supportStruct

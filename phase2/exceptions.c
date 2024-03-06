@@ -130,6 +130,8 @@ void exceptionHandler() {
 void sendMessage(state_t *proc_state){
 	// get the destination from the second parameter of the SYSCALL
 	pcb_t *dst = (pcb_t *)proc_state->reg_a1;
+	if (dst == ssi_pcb)
+		dst = true_ssi_pcb;
 
 	// dst doesn't exist: fails
 	if(isFree(&dst->p_list)){
@@ -142,7 +144,12 @@ void sendMessage(state_t *proc_state){
 		// copy message payload and sender in designated memory areas
 		if ((void *)(dst->p_s).reg_a2 != NULL)
 			memcpy((memaddr*)(dst->p_s).reg_a2, &(proc_state->reg_a2), sizeof(memaddr));
-		(dst->p_s).reg_a0 = (memaddr)current_process;
+
+		// aliasing for ssi_pcb
+		if (current_process == true_ssi_pcb)
+			(dst->p_s).reg_a0 = (memaddr)ssi_pcb;
+		else
+			(dst->p_s).reg_a0 = (memaddr)current_process;
 			
 		// awake receveing process and update count
 		outProcQ(&waiting_MSG, dst);
@@ -178,6 +185,8 @@ void sendMessage(state_t *proc_state){
 */
 void receiveMessage(state_t *proc_state){
 	pcb_t *sender = (pcb_t *)proc_state->reg_a1;
+	if (sender == ssi_pcb)
+		sender = true_ssi_pcb;
 	
 	// try to get a message from the inbox
 	msg_t *msg = popMessage(&current_process->msg_inbox, sender);
@@ -188,6 +197,10 @@ void receiveMessage(state_t *proc_state){
 		// update the time passed during the process' timeslice and save the current state
 		current_process->p_time += (TIMESLICE - getTIMER());
 	 	memcpy(&current_process->p_s, proc_state, sizeof(state_t));
+
+		// aliasing for ssi_pcb: if it's waiting for a message from ssi_pcb change it to the true address
+		if ((pcb_t*)current_process->p_s.reg_a1 == ssi_pcb)
+			current_process->p_s.reg_a1 = (memaddr)true_ssi_pcb;
 
 		// block process if it is not already blocked by the ssi in waitForClock or doIO
 		if (!current_process->blocked) {
@@ -202,7 +215,12 @@ void receiveMessage(state_t *proc_state){
 		// a message was found, transfer data
 		if((void *)proc_state->reg_a2 != NULL)
 			memcpy((memaddr*)proc_state->reg_a2, &(msg->m_payload), sizeof(memaddr));
-		proc_state->reg_a0 = (memaddr)msg->m_sender;
+
+		// aliasing for the ssi_pcb
+		if (msg->m_sender == true_ssi_pcb)
+			proc_state->reg_a0 = (memaddr)ssi_pcb;
+		else
+			proc_state->reg_a0 = (memaddr)msg->m_sender;
 
 		// free message space
 		freeMsg(msg);

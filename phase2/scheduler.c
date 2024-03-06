@@ -9,8 +9,8 @@
  * This function will check if the ssi is the only process alive
 */
 static inline int ssiOnlyProcess(){
-	return process_count == 1 && (current_process == ssi_pcb || headProcQ(&ready_queue) == ssi_pcb
-		|| (soft_block_count == 1 && ssi_pcb->blocked==1));
+	return process_count == 1 && (current_process == true_ssi_pcb || headProcQ(&ready_queue) == true_ssi_pcb
+		|| (soft_block_count == 1 && true_ssi_pcb->blocked==1));
 }
 
 /**
