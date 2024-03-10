@@ -41,9 +41,6 @@ void handleIntervalTimer() {
 
         // send custom message: we cannot use SYSCALL as we are already in an exception
         sendMessage(&custom_state);
-
-        // TODO: cosa facciamo se non riesce a mandare i messaggi a true_ssi_pcb?
-        if (custom_state.reg_a0 == MSGNOGOOD) {}
     }
 
     // return control to current process or call scheduler
@@ -134,9 +131,6 @@ void handleDeviceInterrupt(unsigned short device_number) {
 
         // manually send the message as we cannot use SYSCALL inside an exception
         sendMessage(&custom_state);
-
-        // TODO: cosa facciamo se non riesce a mandare i messaggi a true_ssi_pcb?
-        if (custom_state.reg_a0 == MSGNOGOOD) {}
     }
 
     // return control to current process or call scheduler

@@ -6,8 +6,6 @@
 #include "./headers/ssi.h"
 #include <uriscv/liburiscv.h>
 #include <uriscv/arch.h>
-// TODO: controllare gli include
-#include <uriscv/types.h>
 #include "../phase1/headers/msg.h"
 
 void uTLB_RefillHandler() {
@@ -75,9 +73,8 @@ void exceptionHandler() {
 			state_t *proc_state  = (state_t *)BIOSDATAPAGE;
 			// check if the process is in user mode
 			if (!(proc_state->status & MSTATUS_MPP_MASK)) {
-				// TODO: find RI
 				// set the new cause for the exception
-				setCAUSE(2);
+				setCAUSE(SYSEXCEPTION);
 				// call the function again on itself
 				exceptionHandler();
 			}
@@ -161,7 +158,6 @@ void sendMessage(state_t *proc_state){
 	}
 }
 
-// TODO: controllare senso di memcpy
 /**
  * Asynchronous receive.
  * @param proc_state state of the process when interrupted, it contains the paramters with which the SYSCALL was called

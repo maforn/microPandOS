@@ -14,7 +14,7 @@ extern pcb_t *ssi_pcb;
 
 // set MPIE to 1 and MPP to 11
 #define STATUS_INTERRUPT_ON_NEXT (MSTATUS_MPP_M + MSTATUS_MPIE_MASK) 
-// set MIE to 1 and MPP to 11
-#define STATUS_INTERRUPT_ON_NOW (MSTATUS_MPP_M + MSTATUS_MIE_MASK) 
+// set MIE to 1
+#define STATUS_INTERRUPT_ON_NOW MSTATUS_MIE_MASK
 
 #endif

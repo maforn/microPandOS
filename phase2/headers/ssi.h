@@ -6,7 +6,6 @@
 #define UNBLOCKPROCESSDEVICE 8
 #define UNBLOCKPROCESSTIMER 9
 
-// TODO: check optimal solution
 typedef struct ssi_unblock_do_io {
 	unsigned int status;
 	unsigned int device;

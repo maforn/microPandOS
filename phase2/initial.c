@@ -67,7 +67,6 @@ int main() {
 	process_count++;
 	// set all the interrupts on
 	true_ssi_pcb->p_s.mie = MIE_ALL;
-	// TODO: ricontrollare che sia giusto
 	true_ssi_pcb->p_s.status = STATUS_INTERRUPT_ON_NEXT;
 	// Obtain ramtop with the macro
 	memaddr ramtop;
@@ -84,7 +83,6 @@ int main() {
 	insertProcQ(&ready_queue, second_process);
 	process_count++;
 	second_process->p_s.mie = MIE_ALL;
-	// TODO: controllare come sopra
 	second_process->p_s.status = STATUS_INTERRUPT_ON_NEXT;
 	// FRAMESIZE should be ram's frames -> const PAGESIZE (4kB)
 	second_process->p_s.reg_sp = ramtop - (2 * PAGESIZE);
