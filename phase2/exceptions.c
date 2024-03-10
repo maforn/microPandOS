@@ -6,8 +6,6 @@
 #include "./headers/ssi.h"
 #include <uriscv/liburiscv.h>
 #include <uriscv/arch.h>
-// TODO: controllare gli include
-#include <uriscv/types.h>
 #include "../phase1/headers/msg.h"
 
 void uTLB_RefillHandler() {
@@ -91,13 +89,9 @@ void exceptionHandler() {
 				}
 				else if (proc_state->reg_a0 == RECEIVEMESSAGE)
 					receiveMessage(proc_state);
-				/*TODO: else or else if?
-        else{
 				// Syscalls not directly handled by the nucleus
-				}*/
-				else if (proc_state->reg_a0 >= 1) {
+				else
 					passUpOrDie(GENERALEXCEPT);
-				}
 			}
 		}
 		// TLB exceptions: call pass up
@@ -164,7 +158,6 @@ void sendMessage(state_t *proc_state){
 	}
 }
 
-// TODO: controllare senso di memcpy
 /**
  * Asynchronous receive.
  * @param proc_state state of the process when interrupted, it contains the paramters with which the SYSCALL was called
@@ -179,7 +172,6 @@ void receiveMessage(state_t *proc_state){
 
 	// if no messages are found block the process
 	if (msg == NULL){
-		// TODO: save processor state and update CPU time
 		// update the time passed during the process' timeslice and save the current state
 		current_process->p_time += (TIMESLICE - getTIMER());
 	 	memcpy(&current_process->p_s, proc_state, sizeof(state_t));

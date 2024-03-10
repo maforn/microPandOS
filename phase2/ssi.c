@@ -62,7 +62,6 @@ void terminateProcess(pcb_t *proc) {
 		current_process = NULL;
 	else if (outProcQ(&ready_queue, proc) == NULL) {
 		soft_block_count--;
-		// TODO: controllare lo tiri fuori
 		// delete it from whichever queue it's in
 		list_del(&proc->p_list);
 	}

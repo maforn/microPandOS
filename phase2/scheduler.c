@@ -3,8 +3,6 @@
 #include "./headers/initial.h"
 #include <uriscv/liburiscv.h>
 
-
-// TODO: check condition
 /**
  * This function will check if the ssi is the only process alive
 */
@@ -19,14 +17,12 @@ static inline int ssiOnlyProcess(){
 */
 void schedule() {
 	if (emptyProcQ(&ready_queue)) {
-		// TODO: Controllare se è così che si controlla che SSI è l'unico vivo
 		if (ssiOnlyProcess())
 			HALT();
 		// if there is no ready process and more then one are blocked, then they are waiting for an interrupt
 		else if (process_count > 0 && soft_block_count > 0) {
 			// set local timer so that it does not get unlocked before the interrupt of the Interval Timer
 			setTIMER(PSECOND);
-			// TODO: CONTROLLARE correttezza
 			// set interrupt mask as all on
 			setMIE(MIE_ALL);
 			setSTATUS(STATUS_INTERRUPT_ON_NOW);
