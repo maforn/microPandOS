@@ -75,11 +75,10 @@ void exceptionHandler() {
 			state_t *proc_state  = (state_t *)BIOSDATAPAGE;
 			// check if the process is in user mode
 			if (!(proc_state->status & MSTATUS_MPP_MASK)) {
-				// TODO: find RI
 				// set the new cause for the exception
-				setCAUSE(2);
-				// call the function again on itself
-				exceptionHandler();
+				setCAUSE(SYSEXCEPTION);
+				// call the passup function
+				passUpOrDie(GENERALEXCEPT);
 			}
 			else {
 				// we need to update the program counter of the caller, or it will keep calling the SYSCALL function
