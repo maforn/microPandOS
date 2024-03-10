@@ -75,8 +75,8 @@ void exceptionHandler() {
 			if (!(proc_state->status & MSTATUS_MPP_MASK)) {
 				// set the new cause for the exception
 				setCAUSE(SYSEXCEPTION);
-				// call the function again on itself
-				exceptionHandler();
+				// call the passup function
+				passUpOrDie(GENERALEXCEPT);
 			}
 			else {
 				// we need to update the program counter of the caller, or it will keep calling the SYSCALL function
