@@ -87,3 +87,12 @@ When the interrupts handler sends a message to the SSI because the Clock has tic
 As of now, there are no checks when a process is required to do IO on a device. If multiple processes request a doIO on the same controller before it manages to compute the initial one the command will be overwritten. This could be handled by creating a queue for commands and not only processes as it is now, but because of how the tests are conceived only one process (the printing one) should access the devices, all the others just send messages to it, asking to print the specified string.
 
 ## Phase 3: The Support Level
+
+## Documentation
+- [𝜇PandOS: Setup Tutorial](/docs/TUTORIAL.md)
+- [𝜇PandOS: Phase 1](/docs/MicroPandOSPhase1Spec.pdf)
+- [𝜇PandOS: Phase 2](/docs/MicroPandOSPhase2Spec.pdf)
+- [Porting of the 𝜇MPS3 Educational Emulator to RISC-V](https://amslaurea.unibo.it/29151/1/GianmariaRovelli_BozzaTesi_09_07_2023.pdf)
+- [µMPS3 Principles of Operation](https://www.cs.unibo.it/~renzo/doc/umps3/uMPS3princOfOperations.pdf)
+- [The RISC-V Instruction Set Manual, Volume I: Unprivileged ISA](https://github.com/riscv/riscv-isa-manual/releases/tag/Ratified-IMAFDQC)
+- [The RICV-V Instruction Set Manual, Volume II: Privileged Architecture](https://github.com/riscv/riscv-isa-manual/releases/tag/Priv-v1.12)
