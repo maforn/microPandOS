@@ -28,9 +28,6 @@ pcb_t *ssi_pcb = (pcb_t*)42;
 #include "./headers/ssi.h"
 
 extern void test();
-/*void test() {
-	while(1){}
-}*/
 
 int main() {
 	// ATT: per le librerie di uriscv guardare /urs/local/include/uriscv
