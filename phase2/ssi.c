@@ -28,9 +28,9 @@ unsigned int createProcess(pcb_t * sender, ssi_create_process_t *arg) {
 	pcb_t *new_pcb = allocPcb();
 	if (new_pcb == NULL) // no new proc allocable
 		return NOPROC;
-	
+
 	// initialize the new pcb's fields to the values specified by arg
-	memcpy(&(new_pcb->p_s), arg->state, sizeof(state_t));
+	new_pcb->p_s = *arg->state;
 	if (arg->support == NULL)
 		new_pcb->p_supportStruct = NULL;
 	else
@@ -54,7 +54,7 @@ void terminateProcess(pcb_t *proc) {
 		pcb_t* removedChild = container_of(proc->p_child.next, pcb_t, p_sib);
 		terminateProcess(removedChild);
 	}
-	
+
 	// decrease the process count and remove the specified process: if it is not the current process or in
 	// the ready queue then it's in a blocking queue. In this case decrease the soft block count as well 
 	process_count--;
@@ -126,8 +126,8 @@ static inline void unblockProcessFromTimer() {
 
 /**
  * This function will send a message to the sender with the time it has used as the active process.
- * The field p_time is updated every time a process is stopped, be it because of a receiveMessage or 
- * because of a PLT swap 
+ * The field p_time is updated every time a process is stopped, be it because of a receiveMessage or
+ * because of a PLT swap
 */
 static inline void getCPUTime(pcb_t* sender){
 	SYSCALL(SENDMESSAGE, (unsigned int)sender, (unsigned int)sender->p_time, 0);
