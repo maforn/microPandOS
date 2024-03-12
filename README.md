@@ -1,5 +1,5 @@
 # µPandOS
-Implementation of a microkernel operating system on the µRISCV architecture. All the relevant instructions and documentation are in the [docs](/docs) folder
+Implementation of a microkernel operating system on the µRISCV architecture. All the relevant instructions and documentation are in the [Documentation](#Documentation) section.
 
 ## Phase 1: The Queues Manager
 In this phase, we created two queue managers, one for the processes (PCB) and one for the messages (msg). 
