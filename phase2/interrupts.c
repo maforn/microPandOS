@@ -56,7 +56,7 @@ void handleIntervalTimer() {
 void handleLocalTimer() {
     if (current_process != NULL) {
         // update current process status
-    	memcpy(&current_process->p_s, (state_t *)BIOSDATAPAGE, sizeof(state_t));
+    	current_process->p_s = *(state_t *)BIOSDATAPAGE;
 
     	// add time passed to the process that has finished its timeslice
     	current_process->p_time += TIMESLICE;
