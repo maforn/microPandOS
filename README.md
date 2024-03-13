@@ -1,4 +1,4 @@
-# PandOS
+# µPandOS
 Implementation of a microkernel operating system on the µRISCV architecture. All the relevant instructions and documentation are in the [Documentation](#Documentation) section.
 
 ## Phase 1: The Queues Manager
@@ -34,7 +34,7 @@ When the system-wide timer finishes its clock, it fires an interrupt that we han
 #### Interrupts: Local Timer
 When the time slice allocated to the current process finishes, an interrupt is fired, at this point, we update the current process' status and put it at the end of the ready queue. Then we call the scheduler.  
 #### Interrupts: Device Finished
-When a device finishes elaborating the command that it received, it will fire an interrupt. The function that handles this will check which device has an interrupt active by checking the Interrupting Devices Bit Map, storing the status, sending an ACK to the device, and then sending a message to the SSI to unlock the waiting process and send the result of the operation.
+When a device finishes elaborating the command that it received or encounters a problem, it will fire an interrupt. The function that handles this will check which device has an interrupt active by checking the Interrupting Devices Bit Map, storing the status, sending an ACK to the device, and then sending a message to the SSI to unlock the waiting process and send the result of the operation.
 
 ---
 ### The SSI
@@ -64,10 +64,9 @@ This function will be called with a message from the exception handler that hand
 ### Additional Choices And Details
 #### Edited the `pcb_t` structure
 We have added a new field to the original structure of `pcb_t`, as we deemed it necessary to have an additional `blocked` field to check if the process was already in a queue of blocked pcbs or not. This is necessary because each process can be waiting for both a message and the Interval Timer or a Device IO. As each process `p_list` cannot be in two queues at the same time, we manage the insertion in each queue with this field.  
-
-
+  
 Let's take as a case study the doIO operation. The process sends a request to the SSI and then does a syscall to receive the SSI's answer. If the local timer sends an interrupt before the process calls the receive, the control will eventually pass to the ssi, whose `doIO` will insert the process' pcb in the list for the PCBs waiting for the device and it will set `blocked` to 1. The control will eventually then come back to the original process that will call receive a message: at this point, the process is already blocked, so it will not be put on the waiting msg list. If the local timer does not fire before the blocking syscall, then the process will be put in the waiting msg list and `blocked` will be set to 1. Then the scheduler will be called and the SSI's `doIO` function will remove the process from the waiting msg list and it will put it in the list waiting for the device.  
-When the device completes the operation and the interrupt is received, the process waiting for the interrupt will be removed from the waiting device queue and put in the waiting message queue. The interrupt handler will send a message to the SSI, which will in turn send a message to the process and effectively unlock it.  
+When the device sends the interrupt and it is received, the process waiting for the interrupt will be removed from the waiting device queue and put in the waiting message queue. The interrupt handler will send a message to the SSI, which will in turn send a message to the process and effectively unlock it.  
 In this way, the PCB was never in two different queues at the same time, just as we needed it.
 
 #### Sending messages to the SSI while in an exception
@@ -90,7 +89,7 @@ We had to reimplement memcpy in the [utils](/phase2/utils.c) as the compiler sub
 Here are two problems that are theoretically possible but practically are never encountered in the test.
 
 #### Not Checking Manual SendMessage
-When the interrupts handler sends a message to the SSI because the Clock has ticked or a device has finished we do not check if the message was actually sent or not (it may not be sent if there are no more messages left to allocate). This event is almost impossible and can only be caused by a malicious process that fills up the message table by sending messages to a process that does not call receive or by never waiting for an answer.
+When the interrupts handler sends a message to the SSI because the Clock has ticked or a device has finished we do not check if the message was actually sent or not (it may not be sent if there are no more messages left to allocate). This event is almost impossible and can only be caused by a malicious process that fills up the message table by sending messages to a process that does not call receive, or by never waiting for an answer, as almost all the sent messages will receive an answer.
 
 #### Multiple Requests To The Same Controller.
 As of now, no checks are performed when a process requires a DoIO operation. Subsequent commands to a device will override previous ones if they haven't already been performed. This could be handled by creating a queue for commands and not only processes as it is now. This problem doesn't appear in the tests since only one process accesses the terminal. All other processes send the strings they desire to print to this special process, which forwards them to the device via the SSI.
