@@ -64,27 +64,35 @@ This function will be called with a message from the exception handler that hand
 ### Additional Choices And Details
 #### Edited the `pcb_t` structure
 We have added a new field to the original structure of `pcb_t`, as we deemed it necessary to have an additional `blocked` field to check if the process was already in a queue of blocked pcbs or not. This is necessary because each process can be waiting for both a message and the Interval Timer or a Device IO. As each process `p_list` cannot be in two queues at the same time, we manage the insertion in each queue with this field.  
+<br>
 Let's take as a case study the doIO operation. The process sends a request to the SSI and then does a syscall to receive the SSI's answer. If the local timer sends an interrupt before the process calls the receive, the control will eventually pass to the ssi, whose `doIO` will insert the process' pcb in the list for the PCBs waiting for the device and it will set `blocked` to 1. The control will eventually then come back to the original process that will call receive a message: at this point, the process is already blocked, so it will not be put on the waiting msg list. If the local timer does not fire before the blocking syscall, then the process will be put in the waiting msg list and `blocked` will be set to 1. Then the scheduler will be called and the SSI's `doIO` function will remove the process from the waiting msg list and it will put it in the list waiting for the device.  
-When the device completes the operation and the interrupt is received, the process waiting for the interrupt will be removed from the waiting device queue and put in the waiting message queue, then a message will be sent to the SSI that will send a message to the process and effectively unlock it.  
+When the device completes the operation and the interrupt is received, the process waiting for the interrupt will be removed from the waiting device queue and put in the waiting message queue. The interrupt handler will send a message to the SSI, which will in turn send a message to the process and effectively unlock it.  
 In this way, the PCB was never in two different queues at the same time, just as we needed it.
+
 #### Sending messages to the SSI while in an exception
 When some exceptions are raised we need to tell the SSI to send messages to unlock PCBs waiting for the Interval Timer of a device's IO. As we are already in an exception we cannot use the standard function `SYSCALL` to send messages, as it would override the current content of `BIOSDATAPAGE` and thus lose the current process's status. So we manually call the `sendMessage` function with a fake status to send a message to the SSI.
+
 #### Aliasing the SSI pcb
-For security reasons, we cannot expose the SSI pcb (`true_ssi_pcb`) as a global variable, so we create an alias (`ssi_pcb`) with a fixed value to an address that we know is not available (in our case `42`, it's in kseg0) and in the `receiveMessage` and `sendMessage` functions we handle the swap between the *true* address and the alias.
+For security reasons, we cannot expose the SSI pcb (`true_ssi_pcb`) as a global variable, so we create an alias (`ssi_pcb`) with a fixed value to an address that we know is not available (in our case `42`, which is in kseg0). In the `receiveMessage` and `sendMessage` functions we handle the swap between the *true* address and the alias.
+
 #### `p_time` updating policy
-Each `pcb_t` has a field called `p_time` that keeps track of how much time the process was active (used the CPU). We decided that it was sufficient to update this field only when the process was blocked by an event that may be either the Local Timer (`p_time += TIMESLICE`) and by the blocking Syscall (update the field with the time passed: `p_time += TIMESLICE - getTIMER()`). When a process asks the SSI how much time it has used the CPU it will do a blocking syscall or it may be interrupted by the Local Timer, so on all the relevant occasions the field is correctly updated.
+Each `pcb_t` has a field called `p_time` that keeps track of how much time the process was active (i.e. used the CPU). We decided that it was sufficient to update this field only when the process was blocked by an event that may be either the Local Timer (`p_time += TIMESLICE`) and by the blocking Syscall (update the field with the time passed: `p_time += TIMESLICE - getTIMER()`). When a process asks the SSI how much time it has used the CPU, it will do a blocking syscall or it may be interrupted by the Local Timer, so on all the relevant occasions the field is correctly updated.
+
 #### setTIMER before WAIT
-When the scheduler needs to wait for the next interrupt we have to deactivate the local timer or the waiting scheduler will be continuously interrupted while it may be waiting for the interval timer (that is, in our case, 20 times the local timer). To avoid this we set the interval timer to the same time required by the global interval timer so that we are sure that the interval timer's interrupt will be fired before the local timer's.
+When the scheduler needs to wait for the next interrupt, we have to deactivate the local timer or the waiting scheduler will be continuously interrupted while it may be waiting for the interval timer (that is, in our case, 20 times the local timer). To avoid this we set the interval timer to the same time required by the global interval timer so that we are sure that the interval timer's interrupt will be fired before the local timer's.
+
 #### Memcpy
 We had to reimplement memcpy in the [utils](/phase2/utils.c) as the compiler substituted the * (dereferencing) with memcpy automatically when handling structures.
 
 ---
 ### Theoretically Possible Problems
-Here are two problems that are theoretically possible but practically are never encountered in the test
+Here are two problems that are theoretically possible but practically are never encountered in the test.
+
 #### Not Checking Manual SendMessage
-When the interrupts handler sends a message to the SSI because the Clock has ticked or a device has finished we do not check if the message was actually sent or not (it may not be sent if there are not more messages left to allocate). This event is almost impossible and can only be caused by a malicious process that fills up the message table by sending messages to a process that does not call or receive or by never waiting for an answer.
-#### Multiple Requests To The Same Controller
-As of now, there are no checks when a process is required to do IO on a device. If multiple processes request a doIO on the same controller before it manages to compute the initial one the command will be overwritten. This could be handled by creating a queue for commands and not only processes as it is now, but because of how the tests are conceived only one process (the printing one) should access the devices, all the others just send messages to it, asking to print the specified string.
+When the interrupts handler sends a message to the SSI because the Clock has ticked or a device has finished we do not check if the message was actually sent or not (it may not be sent if there are no more messages left to allocate). This event is almost impossible and can only be caused by a malicious process that fills up the message table by sending messages to a process that does not call or receive or by never waiting for an answer.
+
+#### Multiple Requests To The Same Controller.
+As of now, no checks are performed when a process requires a DoIO operation. Subsequent commands to a device will override previous ones if they haven't already been performed. This could be handled by creating a queue for commands and not only processes as it is now. This problem doesn't appear in the tests since only one process accesses the terminal. All other processes send the strings they desire to print to this special process, which forwards them to the device via the SSI.
 
 ## Phase 3: The Support Level
 
