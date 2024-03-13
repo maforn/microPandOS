@@ -90,7 +90,7 @@ We had to reimplement memcpy in the [utils](/phase2/utils.c) as the compiler sub
 Here are two problems that are theoretically possible but practically are never encountered in the test.
 
 #### Not Checking Manual SendMessage
-When the interrupts handler sends a message to the SSI because the Clock has ticked or a device has finished we do not check if the message was actually sent or not (it may not be sent if there are no more messages left to allocate). This event is almost impossible and can only be caused by a malicious process that fills up the message table by sending messages to a process that does not call or receive or by never waiting for an answer.
+When the interrupts handler sends a message to the SSI because the Clock has ticked or a device has finished we do not check if the message was actually sent or not (it may not be sent if there are no more messages left to allocate). This event is almost impossible and can only be caused by a malicious process that fills up the message table by sending messages to a process that does not call receive or by never waiting for an answer.
 
 #### Multiple Requests To The Same Controller.
 As of now, no checks are performed when a process requires a DoIO operation. Subsequent commands to a device will override previous ones if they haven't already been performed. This could be handled by creating a queue for commands and not only processes as it is now. This problem doesn't appear in the tests since only one process accesses the terminal. All other processes send the strings they desire to print to this special process, which forwards them to the device via the SSI.
