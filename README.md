@@ -1,4 +1,4 @@
-# µRISCV
+# PandOS
 Implementation of a microkernel operating system on the µRISCV architecture. All the relevant instructions and documentation are in the [Documentation](#Documentation) section.
 
 ## Phase 1: The Queues Manager
@@ -64,7 +64,8 @@ This function will be called with a message from the exception handler that hand
 ### Additional Choices And Details
 #### Edited the `pcb_t` structure
 We have added a new field to the original structure of `pcb_t`, as we deemed it necessary to have an additional `blocked` field to check if the process was already in a queue of blocked pcbs or not. This is necessary because each process can be waiting for both a message and the Interval Timer or a Device IO. As each process `p_list` cannot be in two queues at the same time, we manage the insertion in each queue with this field.  
-<br>
+
+
 Let's take as a case study the doIO operation. The process sends a request to the SSI and then does a syscall to receive the SSI's answer. If the local timer sends an interrupt before the process calls the receive, the control will eventually pass to the ssi, whose `doIO` will insert the process' pcb in the list for the PCBs waiting for the device and it will set `blocked` to 1. The control will eventually then come back to the original process that will call receive a message: at this point, the process is already blocked, so it will not be put on the waiting msg list. If the local timer does not fire before the blocking syscall, then the process will be put in the waiting msg list and `blocked` will be set to 1. Then the scheduler will be called and the SSI's `doIO` function will remove the process from the waiting msg list and it will put it in the list waiting for the device.  
 When the device completes the operation and the interrupt is received, the process waiting for the interrupt will be removed from the waiting device queue and put in the waiting message queue. The interrupt handler will send a message to the SSI, which will in turn send a message to the process and effectively unlock it.  
 In this way, the PCB was never in two different queues at the same time, just as we needed it.
