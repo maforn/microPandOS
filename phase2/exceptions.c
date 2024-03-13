@@ -123,7 +123,7 @@ void sendMessage(state_t *proc_state){
 
 		// copy message payload and sender in designated memory areas
 		if ((void *)(dst->p_s).reg_a2 != NULL)
-			*(memaddr*)(dst->p_s).reg_a2 = proc_state->reg_a2;
+			memcpy((memaddr*)(dst->p_s).reg_a2, &(proc_state->reg_a2), sizeof(memaddr));
 
 		// aliasing for ssi_pcb
 		if (current_process == true_ssi_pcb)
@@ -192,7 +192,7 @@ void receiveMessage(state_t *proc_state){
 	else{
 		// a message was found, transfer data
 		if((void *)proc_state->reg_a2 != NULL)
-			*(memaddr*)proc_state->reg_a2 = msg->m_payload;
+			memcpy((memaddr*)proc_state->reg_a2, &(msg->m_payload), sizeof(memaddr));
 
 		// aliasing for the ssi_pcb
 		if (msg->m_sender == true_ssi_pcb)
