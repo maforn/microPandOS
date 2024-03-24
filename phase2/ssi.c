@@ -56,11 +56,12 @@ void terminateProcess(pcb_t *proc) {
 	}
 
 	// decrease the process count and remove the specified process: if it is not the current process or in
-	// the ready queue then it's in a blocking queue. In this case decrease the soft block count as well 
+	// the ready queue or in the message queue then it's in a blocking queue. In this case decrease the 
+	// soft block count as well 
 	process_count--;
 	if (current_process == proc)
 		current_process = NULL;
-	else if (outProcQ(&ready_queue, proc) == NULL) {
+	else if (outProcQ(&ready_queue, proc) == NULL && outProcQ(&waiting_MSG, proc) == NULL) {
 		soft_block_count--;
 		// delete it from whichever queue it's in
 		list_del(&proc->p_list);
@@ -85,6 +86,7 @@ static inline void removeFromMessageQueue(pcb_t *process) {
 void doIO(pcb_t *sender, ssi_do_io_t *do_io) {
 	// remove the process from the waiting message queue: a pcb can stay in only one queue at a time
 	removeFromMessageQueue(sender);
+	soft_block_count++;
 
 	// block the pcb: get the device and controller from the address
 	unsigned short device_number = ((unsigned int)do_io->commandAddr - START_DEVREG) / (DEVPERINT  * DEVREGSIZE);
@@ -107,6 +109,7 @@ void doIO(pcb_t *sender, ssi_do_io_t *do_io) {
 static inline void unblockProcessFromDevice(ssi_unblock_do_io_t *do_io) {
 	pcb_t *proc = removeProcQ(&blocked_pcbs[do_io->device][do_io->controller]);
 	insertProcQ(&waiting_MSG, proc);
+	soft_block_count--;
 	SYSCALL(SENDMESSAGE, (unsigned int)proc, (unsigned int)do_io->status, 0);
 }
 
@@ -120,6 +123,7 @@ static inline void unblockProcessFromTimer() {
 	while ( !emptyProcQ( &waiting_IT ) ) {
 		pcb_t* process = removeProcQ(&waiting_IT);
 		insertProcQ(&waiting_MSG, process);
+		soft_block_count--;
 		SYSCALL(SENDMESSAGE, (unsigned int)process, 0, 0);
 	}
 }
@@ -139,6 +143,7 @@ static inline void getCPUTime(pcb_t* sender){
 */
 static inline void waitForClock(pcb_t* sender){
 	removeFromMessageQueue(sender);
+	soft_block_count++;
 	sender->blocked = 1;
 	insertProcQ(&waiting_IT, sender);
 }

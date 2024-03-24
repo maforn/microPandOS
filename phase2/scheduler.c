@@ -8,7 +8,7 @@
 */
 static inline int ssiOnlyProcess(){
 	return process_count == 1 && (current_process == true_ssi_pcb || headProcQ(&ready_queue) == true_ssi_pcb
-		|| (soft_block_count == 1 && true_ssi_pcb->blocked==1));
+		|| (soft_block_count == 0 && true_ssi_pcb->blocked==1));
 }
 
 /**
