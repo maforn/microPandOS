@@ -131,11 +131,10 @@ void sendMessage(state_t *proc_state){
 		else
 			(dst->p_s).reg_a0 = (memaddr)current_process;
 
-		// awake receveing process and update count
+		// awake receveing process
 		outProcQ(&waiting_MSG, dst);
 		dst->blocked = 0;
 		insertProcQ(&ready_queue, dst);
-		soft_block_count--;
 
 		proc_state->reg_a0 = 0; // success
 	}
@@ -185,7 +184,6 @@ void receiveMessage(state_t *proc_state){
 			insertProcQ(&waiting_MSG, current_process);
 			current_process->blocked = 1;
 		}
-		soft_block_count++;
 		current_process = NULL;
 		schedule();
 	}
