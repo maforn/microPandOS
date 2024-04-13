@@ -73,8 +73,6 @@ void exceptionHandler() {
 			state_t *proc_state  = (state_t *)BIOSDATAPAGE;
 			// check if the process is in user mode
 			if (!(proc_state->status & MSTATUS_MPP_MASK)) {
-				// set the new cause for the exception
-				setCAUSE(SYSEXCEPTION);
 				// call the passup function
 				passUpOrDie(GENERALEXCEPT);
 			}
