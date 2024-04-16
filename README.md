@@ -100,6 +100,7 @@ As of now, no checks are performed when a process requires a DoIO operation. Sub
 - [𝜇PandOS: Setup Tutorial](/docs/TUTORIAL.md)
 - [𝜇PandOS: Phase 1](/docs/MicroPandOSPhase1Spec.pdf)
 - [𝜇PandOS: Phase 2](/docs/MicroPandOSPhase2Spec.pdf)
+- [𝜇PandOS: Phase 3](/docs/MicroPandOSPhase3Spec.pdf)
 - [Porting of the 𝜇MPS3 Educational Emulator to RISC-V](https://amslaurea.unibo.it/29151/1/GianmariaRovelli_BozzaTesi_09_07_2023.pdf)
 - [µMPS3 Principles of Operation](https://www.cs.unibo.it/~renzo/doc/umps3/uMPS3princOfOperations.pdf)
 - [The RISC-V Instruction Set Manual, Volume I: Unprivileged ISA](https://github.com/riscv/riscv-isa-manual/releases/tag/Ratified-IMAFDQC)

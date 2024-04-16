@@ -40,8 +40,8 @@
 
 /* Mikeyg Added constants */
 
-#define MAXPROC 40
-#define MAXMESSAGES 40
+#define MAXPROC 50
+#define MAXMESSAGES 50
 
 #define ANYMESSAGE 0
 #define MSGNOGOOD -1
@@ -122,6 +122,13 @@
 #define ASIDSHIFT     6
 #define SHAREDSEGFLAG 30
 
+#define SENDMSG 1
+#define RECEIVEMSG 2
+
+#define GET_TOD 1
+#define TERMINATE 2
+#define WRITEPRINTER 3
+#define WRITETERMINAL 4
 
 /* Index register constants */
 #define PRESENTFLAG 0x80000000
@@ -222,3 +229,4 @@
 #define START_DEVREG		0x10000054
 
 #endif
+
