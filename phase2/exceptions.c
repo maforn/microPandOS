@@ -19,10 +19,8 @@ void uTLB_RefillHandler() {
   int p = proc_state->entry_hi & GETPAGENO;
   // find the page entry in the process support struct
   int i = 0;
-  while (i < USERPGTBLSIZE) {
-    if ((getPteEntry(current_process, i).pte_entryHI & GETPAGENO) == p) {
-      break;
-    }
+  while (i < USERPGTBLSIZE &&
+         ((getPteEntry(current_process, i).pte_entryHI & GETPAGENO) != p)) {
     i++;
   }
   // set the new entry HI end LO, write to the TLB and Load back the process
