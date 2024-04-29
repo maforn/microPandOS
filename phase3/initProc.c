@@ -72,14 +72,12 @@ void InitiatorProcess() {
     SYSCALL(RECEIVEMESSAGE, (unsigned int)sst_pcbs[i], 0, 0);
   }
 
-  // reduce process count to 1 by killing the mutex
+  // reduce process count to 1 by itself and its children (the mutex)
   ssi_payload_t term_process_payload = {
       .service_code = TERMPROCESS,
-      .arg = (void *)swap_mutex_pcb,
+      .arg = (void *)NULL,
   };
   SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb,
           (unsigned int)(&term_process_payload), 0);
-
-  // TODO: I do not need to wait for a response right?
-  // SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, 0, 0);
+  // TODO: devo fare receive e panic nel caso?
 }
