@@ -1,7 +1,8 @@
 #include "../headers/types.h"
 #include <stdlib.h>
+#include <uriscv/liburiscv.h>
 
-//salveremo in RAM stack_tlbExceptHandler e stack_generalExceptHandler di ogni u-proc
+//salviamo in RAM stack_tlbExceptHandler e stack_generalExceptHandler di ogni u-proc
 //a partire da PENULTIMATE_RAM_FRAME... 
 //ci calcoliamo, a seconda del processo, l'indirizzo di memoria, sapendo che i due stack occupano
 //entrambi mezza pagesize, quindi insieme avranno la size di una pagesize
@@ -54,6 +55,22 @@ support_t* get_proc_support_struct(unsigned short procNumber) {
 	return uproc_sup;
 }
 
+extern pcb_t* ssi_pcb;
+
+pcb_t *create_process(state_t *s, support_t *sup) {
+  pcb_t *p;
+  ssi_create_process_t ssi_create_process = {
+      .state = s,
+      .support = sup,
+  };
+  ssi_payload_t payload = {
+      .service_code = CREATEPROCESS,
+      .arg = &ssi_create_process,
+  };
+  SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)&payload, 0);
+  SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&p), 0);
+  return p;
+}
 
 /*
  * SST creation
@@ -67,5 +84,6 @@ void create_SST(unsigned short procNumber) {
 	//pointer to an initialized support structure for the u-proc
 	support_t* uproc_sup = get_proc_support_struct(procNumber);
 
-	//launch u-proc (create_process request to SSI)
+	//launch u-proc (create_process request to SSI)i
+	pcb_t* uproc = create_process(uproc_proc_state, uproc_sup); 
 }
