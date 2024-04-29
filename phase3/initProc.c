@@ -1,4 +1,4 @@
-#include "../headers/types.h"
+#include "./headers/initProc.h"
 #include "../phase2/headers/initial.h"
 #include <uriscv/liburiscv.h>
 
@@ -23,19 +23,6 @@ pcb_t *create_process(state_t *s, support_t *sup) {
   SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)&payload, 0);
   SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&p), 0);
   return p;
-}
-
-void setupPageTable(support_t *uproc) {
-  for (int i = 0; i < USERPGTBLSIZE; i++) {
-    // TODO: check shift
-    uproc->sup_privatePgTbl[i].pte_entryHI =
-        ((UPROCSTARTADDR + i * PAGESIZE) << VPNSHIFT) +
-        (uproc->sup_asid << ASIDSHIFT);
-    uproc->sup_privatePgTbl[i].pte_entryLO = DIRTYON;
-  }
-  // set the last VPN to 0xBFFFF000
-  uproc->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryHI =
-      ((USERSTACKTOP - PAGESIZE) << VPNSHIFT) + (uproc->sup_asid << ASIDSHIFT);
 }
 
 void swap_mutex() {
@@ -78,31 +65,6 @@ void InitiatorProcess() {
     sst_state[i].status |= MSTATUS_MIE_MASK | MSTATUS_MPP_M;
     sst_state[i].mie = MIE_ALL;
     sst_pcbs[i] = create_process(&sst_state[i], NULL);
-
-    /* this part is to initialize the Uproc and should be in the SST
-    uproc_state.reg_sp = USERSTACKTOP;
-    uproc_state.pc_epc = UPROCSTARTADDR;
-    // set all interrupts on and user mode (its mask is 0x0)
-    uproc_state.status = MSTATUS_MIE_MASK;
-    uproc_state.mie = MIE_ALL;
-    // TODO: check
-    // set entry hi asid to i
-    uproc_state.entry_hi = (i + 1) << ASIDSHIFT;
-    uproc_sup[i].sup_asid = i + 1;
-    // TODO: add with other code and check, because I am really confused
-    memaddr ramtop;
-    RAMTOP(ramtop);
-    uproc_sup[i].sup_exceptContext[0] = {.pc = &support_level_TLB_handler,
-                                         .status =
-                                             MSTATUS_MIE_MASK | MSTATUS_MPP_M,
-                                         .stackPtr = ramtop - PAGESIZE};
-
-    uproc_sup[i].sup_exceptContext[1] = {.pc = &support_level_general_handler,
-                                         .status =
-                                             MSTATUS_MIE_MASK | MSTATUS_MPP_M,
-                                         .stackPtr = ramtop - PAGESIZE};
-    setupPageTable(&uproc_sup[i]);
-    create_process(&uproc_state, &uproc_sup[i]);*/
   }
 
   //  Wait for 8 messages, that should be send when each SST is terminated.
@@ -117,6 +79,7 @@ void InitiatorProcess() {
   };
   SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb,
           (unsigned int)(&term_process_payload), 0);
+
   // TODO: I do not need to wait for a response right?
   // SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, 0, 0);
 }
