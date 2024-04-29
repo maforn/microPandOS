@@ -7,10 +7,17 @@
 #include <uriscv/arch.h>
 #include <uriscv/liburiscv.h>
 
-extern swap_t swap_table[POOLSIZE];
+swap_t swap_table[POOLSIZE];        // swap table
 extern pcb_t *ssi_pcb, *swap_mutex_pcb;
 
-unsigned int getFrameAddr(int frame_index){
+void initSwapStructs(){
+    // initialize all frames to be free. Since all asids are non-negative integers, 
+    // a negative value as asid can be used to mark a frame as free.
+    for(int i = 0; i < POOLSIZE; i++)
+        swap_table[i].sw_asid = FREEFRAME;
+}
+
+inline unsigned int getFrameAddr(int frame_index){
     return SWAPSTARTADDR + frame_index * PAGESIZE;
 }
 
@@ -66,11 +73,11 @@ unsigned int readWriteFlash(int operation, int page, int frame, int devnum){
     return status;
 }
 
-unsigned int readFromFlash(int page, int frame, int devnum){
+inline unsigned  int readFromFlash(int page, int frame, int devnum){
     return readWriteFlash(FLASHREAD, page, frame, devnum);
 }
 
-unsigned int writeToFlash(int page, int frame, int devnum){
+inline unsigned int writeToFlash(int page, int frame, int devnum){
     return readWriteFlash(FLASHWRITE, page, frame, devnum);
 }
 
@@ -109,7 +116,7 @@ void TLB_ExceptionHandler(){
     // (7 & 8) determine if frame i is occupied. If so, free the frame by copying the
     // data to the appropriate flash device and updating TLB
     if(swap_table[i].sw_asid != FREEFRAME){
-        // disable interrupts to achieve atomicity
+        // (TODO: check) disable interrupts to achieve atomicity
         unsigned int status = getSTATUS();
         setSTATUS(status & (~MSTATUS_MIE_MASK));
 
@@ -133,7 +140,7 @@ void TLB_ExceptionHandler(){
     // (9) read page p from flash device into frame i
     unsigned int io_status = readFromFlash(p, i, sup_struct->sup_asid);
     // check status for errors
-    if(io_status){
+    if(io_status != 1){
         // TODO: pass to trap handler
     }
     
@@ -151,7 +158,7 @@ void TLB_ExceptionHandler(){
 
     // update page table
     unsigned int elo = sup_struct->sup_privatePgTbl[p].pte_entryLO;
-    sup_struct->sup_privatePgTbl[p].pte_entryLO = (i << PFNSHIFT) | VALIDON | (elo & DIRTYON & GLOBALON);
+    sup_struct->sup_privatePgTbl[p].pte_entryLO = (i << PFNSHIFT) | VALIDON | (elo & (DIRTYON | GLOBALON));
 
     // update TLB
     update_TLB(sup_struct->sup_privatePgTbl[p]);
