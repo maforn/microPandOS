@@ -3,7 +3,7 @@
 
 //salveremo in RAM stack_tlbExceptHandler e stack_generalExceptHandler di ogni u-proc
 //a partire da PENULTIMATE_RAM_FRAME... 
-//ci calcoliamo, a seconda dell'index, l'indirizzo di memoria, sapendo che i due stack occupano
+//ci calcoliamo, a seconda del processo, l'indirizzo di memoria, sapendo che i due stack occupano
 //entrambi mezza pagesize, quindi insieme avranno la size di una pagesize
 //-> avremo la prima page per gli stack del primo u-proc, la seconda per gli stack del secondo e così via...
 
@@ -37,14 +37,18 @@ support_t* get_proc_support_struct(unsigned short procNumber) {
 	support_t* uproc_sup = malloc(sizeof(support_t));
 	//initialize asid
 	uproc_sup->sup_asid = procNumber;
+	
 	//initialize sup_exceptContext 
 	memaddr ramtop;
 	RAMTOP(ramtop);
 	memaddr PENULTIMATE_RAM_FRAME = ramtop - PAGESIZE;
-	uproc_sup->sup_exceptContext[0] = {.pc = &support_level_TLB_handler,.status = MSTATUS_MIE_MASK + MSTATUS_MPP_M,
+	//TODO: set pc to address of support_level_tlb_handler (I put 0 as placeholder)
+	uproc_sup->sup_exceptContext[0] = (context_t) {.pc = 0, .status = MSTATUS_MIE_MASK + MSTATUS_MPP_M,
 	.stackPtr = PENULTIMATE_RAM_FRAME - (procNumber-1)*PAGESIZE};
-	uproc_sup->sup_exceptContext[1] = {.pc = &support_level_general_handler, .status = MSTATUS_MPP_M + MSTATUS_MIE_MASK,
+	//TODO: set pc to address of support_level_general_handler (I put 0 as placeholder)	
+	uproc_sup->sup_exceptContext[1] = (context_t) {.pc = 0, .status = MSTATUS_MPP_M + MSTATUS_MIE_MASK,
 	.stackPtr = PENULTIMATE_RAM_FRAME - (procNumber-1)*PAGESIZE + 0.5*PAGESIZE};
+
 	//initialize pgTbl
 	setUpPageTable(uproc_sup);
 	return uproc_sup;
@@ -53,7 +57,7 @@ support_t* get_proc_support_struct(unsigned short procNumber) {
 
 /*
  * SST creation
- * first the corresponding child u-proc is initialized and created
+ * first the corresponding child u-proc is created
  * then the SST waits for service requests from its child process
 */
 void create_SST(unsigned short procNumber) {
