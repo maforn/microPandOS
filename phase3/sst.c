@@ -1,8 +1,6 @@
 #include "../headers/types.h"
 #include <stdlib.h>
 
-#define PENULTIMATE_RAM_FRAME (RAMTOP - PAGESIZE)
-
 //salveremo in RAM stack_tlbExceptHandler e stack_generalExceptHandler di ogni u-proc
 //a partire da PENULTIMATE_RAM_FRAME... 
 //ci calcoliamo, a seconda dell'index, l'indirizzo di memoria, sapendo che i due stack occupano
@@ -27,7 +25,10 @@ support_t* get_proc_support_struct(unsigned short index) {
 	//initialize asid
 	uproc_sup->sup_asid = index;
 	//initialize sup_exceptContext 
-	uproc_sup->sup_exceptContext[0] = {.pc = &support_level_TLB_handler, .status = MSTATUS_MIE_MASK + MSTATUS_MPP_M,
+	memaddr ramtop;
+	RAMTOP(ramtop);
+	memaddr PENULTIMATE_RAM_FRAME = ramtop - PAGESIZE;
+	uproc_sup->sup_exceptContext[0] = {.pc = &support_level_TLB_handler,.status = MSTATUS_MIE_MASK + MSTATUS_MPP_M,
 	.stackPtr = PENULTIMATE_RAM_FRAME - (index-1)*PAGESIZE};
 	uproc_sup->sup_exceptContext[1] = {.pc = &support_level_general_handler, .status = MSTATUS_MPP_M + MSTATUS_MIE_MASK,
 	.stackPtr = PENULTIMATE_RAM_FRAME - (index-1)*PAGESIZE + 0.5*PAGESIZE};
