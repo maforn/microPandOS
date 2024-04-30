@@ -64,7 +64,8 @@ void InitiatorProcess() {
     sst_state[i].pc_epc = (memaddr)sst_start;
     sst_state[i].status |= MSTATUS_MIE_MASK | MSTATUS_MPP_M;
     sst_state[i].mie = MIE_ALL;
-    sst_pcbs[i] = create_process(&sst_state[i], NULL);
+    // SST shares the same support struct of its uproc 
+    sst_pcbs[i] = create_process(&sst_state[i], &uproc_sup[i]);
   }
 
   //  Wait for 8 messages, that should be send when each SST is terminated.
