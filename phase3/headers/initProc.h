@@ -1,8 +1,10 @@
-#ifndef INIT_PROC_H_INCLUDED
-#define INIT_PRCO_H_INCLUDED
+#ifndef INITPROC_H_INCLUDED
+#define INITPROC_H_INCLUDED
 
-#include "../../phase1/headers/pcb.h"
+#include "../../headers/types.h"
 
-extern pcb_t *swap_mutex_pcb;           // pcb of mutex process
+pcb_t *create_process(state_t *s, support_t *sup);
+extern pcb_t *swap_mutex_pcb;
+extern pcb_t *initiator_pcb;
 
 #endif
