@@ -41,7 +41,7 @@ void InitiatorProcess() {
   initiator_pcb = current_process;
   // TODO: initialize the Swap Pool
 
-  // TODO: controllare come mai e controllare che vada bene in Kernel Mode
+  // initialize the state for the mutex pcb
   STST(&mutex_state);
   mutex_state.reg_sp = mutex_state.reg_sp - PAGESIZE / 4;
   mutex_state.pc_epc = (memaddr)swap_mutex;
@@ -79,5 +79,7 @@ void InitiatorProcess() {
   };
   SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb,
           (unsigned int)(&term_process_payload), 0);
-  // TODO: devo fare receive e panic nel caso?
+  SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, 0, 0);
+  // if it gets to this point the process was not correctly killed, PANIC
+  PANIC();
 }
