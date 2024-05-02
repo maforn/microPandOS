@@ -1,5 +1,6 @@
 #include "../headers/types.h"
 #include <uriscv/liburiscv.h>
+#include "../phase2/headers/ssi.h"
 
 #define STATUS_INTERRUPT_ON_NEXT (MSTATUS_MPIE_MASK + MSTATUS_MPP_M)
 
@@ -41,6 +42,7 @@ pcb_t *create_process(state_t *s, support_t *sup) {
 }
 
 extern support_t uproc_sup_array[UPROCMAX];
+pcb_t* uproc;
 //TODO: change name of uproc_sup in initial.c to uproc_sup_array
 
 /*
@@ -59,7 +61,7 @@ void create_SST(unsigned short procNumber) {
     	// set entry hi asid to i
     	uproc_state.entry_hi = procNumber << ASIDSHIFT;
 	
-	//proc support structure
+	//proc support structure (working on the reference of array's elements)
 	support_t* uproc_sup = &uproc_sup_array[procNumber-1];
 	//initialize asid
 	uproc_sup->sup_asid = procNumber;
@@ -76,5 +78,38 @@ void create_SST(unsigned short procNumber) {
 	//initialize pgTbl
 	setUpPageTable(uproc_sup);
 
-	pcb_t* uproc = create_process(&uproc_state, uproc_sup); 
+	uproc = create_process(&uproc_state, uproc_sup); 
+}
+
+void SSTRequest(pcb_t* sender, int service, void* arg);
+
+void SST_service_entry_point() {
+	while (1) {
+		ssi_payload_t *payload;
+		pcb_t *sender = (pcb_t *)SYSCALL(RECEIVEMESSAGE, (unsigned int)uproc, (unsigned int)&payload, 0);
+		SSTRequest(sender, payload->service_code, payload->arg);
+	}
+}
+	
+extern pcb_t* initiator_pcb;
+
+void SSTRequest(pcb_t* sender, int service, void* arg) {
+	switch (service) {
+		case GET_TOD:
+			break;
+		case TERMINATE:
+			//sending message to initProc to communicate the termination of the SST
+			SYSCALL(SENDMESSAGE, (unsigned int)initiator_pcb, 0,0);
+			//terminate sst (current process) and its progeny
+			ssi_payload_t term_process_payload = {
+  			    .service_code = TERMPROCESS,
+  			    .arg = (void *)NULL,
+  			};
+  			SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&term_process_payload), 0);
+			break;
+		case WRITEPRINTER:
+			break;
+		case WRITETERMINAL:
+			break;
+	}
 }
