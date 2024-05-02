@@ -1,7 +1,6 @@
 #include "../headers/types.h"
 #include "../phase2/headers/initial.h"
 #include "../headers/const.h"
-#include "../testers/h/tconst.h" //TODO: sarebbe meglio non ci fosse ma mi saerve per PARENT, altrimenti ci metto 0 hardcoded
 
 void generalExceptionHandler(){
 
@@ -14,21 +13,13 @@ void generalExceptionHandler(){
     // get the exception cause
     int cause = (exceptionState->cause&GETEXECCODE)>>CAUSESHIFT;
 
-    //TODO: li distinguo cosi?
     if (cause == SYSEXCEPTION){
         // call the syscall exception handler
         SYSCALLExceptionHandler(exceptionState);
-    } else if (cause == IOINTERRUPTS){
+    } else{
         // call the trap exception handler
-        programTrapExceptionHandler(exceptionState);
-    } else {
-        //TODO: altrimenti muori?
-        // terminate process and its progeny
-        terminateProcess(current_process);
-        // current process was terminated, call the scheduler
-        schedule();
+        programTrapExceptionHandler();
     }
-
 }
 
 void SYSCALLExceptionHandler(state_t* proc_state){
@@ -46,7 +37,7 @@ void SYSCALLExceptionHandler(state_t* proc_state){
         unsigned int payload = proc_state->reg_a2;
 
         // syscall to send the message
-        SYSCALL(SENDMSG, (unsigned int)destination, (unsigned int)payload, 0);
+        SYSCALL(SENDMESSAGE, (unsigned int)destination, (unsigned int)payload, 0);
         
 
     }else if(proc_state->reg_a0 == RECEIVEMSG){
@@ -54,21 +45,23 @@ void SYSCALLExceptionHandler(state_t* proc_state){
         // get the sender process
         pcb_t *sender = (pcb_t *)proc_state->reg_a1;
         
-        unsigned int *payload = (unsigned int *)current_process->p_s.reg_a0; //TODO: sicuramente sbagliato
+        unsigned int *payload = (unsigned int *)current_process->p_s.reg_a2;
 
         // syscall to receive the message
-        SYSCALL(RECEIVEMSG, (unsigned int)sender, (unsigned int)payload, 0);
-
-    }else{
-        //TODO: altrimenti muori? anche qui? una strage di processi
-        // terminate process and its progeny
-        terminateProcess(current_process);
-        // current process was terminated, call the scheduler
-        schedule();
+        SYSCALL(RECEIVEMESSAGE, (unsigned int)sender, (unsigned int)payload, 0);
     }
+
+    //TODO: come setto il return value?
+
+    // set the return value
+    proc_state->reg_a0 = 0;
+
+
+    // increment the pc
+    current_process->p_s.pc_epc+= 4;
 }
 
-void programTrapExceptionHandler(state_t* proc_state){
+void programTrapExceptionHandler(){
 
     ssi_payload_t payload;
     payload.service_code = TERMPROCESS;
