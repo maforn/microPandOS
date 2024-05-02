@@ -73,7 +73,7 @@ void programTrapExceptionHandler(state_t* proc_state){
     ssi_payload_t payload;
     payload.service_code = TERMPROCESS;
     payload.arg = NULL;
-    SYSCALL(SENDMESSAGE, (unsigned int)true_ssi_pcb, &payload, 0);
+    SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, &payload, 0);
 
     //TODO: se sta aspettando la mutua esclusione bisogna rilasciarla
 }
