@@ -1,5 +1,4 @@
 #include "../headers/types.h"
-#include <stdlib.h>
 #include <uriscv/liburiscv.h>
 
 #define STATUS_INTERRUPT_ON_NEXT (MSTATUS_MPIE_MASK + MSTATUS_MPP_M)
@@ -55,28 +54,27 @@ void create_SST(unsigned short procNumber) {
 	uproc_state.reg_sp = USERSTACKTOP;
     	uproc_state.pc_epc = UPROCSTARTADDR;
     	// set all interrupts on and user mode (its mask is 0x0)
-    	uproc_state.status = MSTATUS_MIE_MASK;
+    	uproc_state.status = MSTATUS_MPIE_MASK;
     	uproc_state.mie = MIE_ALL;
     	// set entry hi asid to i
     	uproc_state.entry_hi = procNumber << ASIDSHIFT;
 	
 	//proc support structure
-	support_t uproc_sup;
+	support_t* uproc_sup = &uproc_sup_array[procNumber-1];
 	//initialize asid
-	uproc_sup.sup_asid = procNumber;
+	uproc_sup->sup_asid = procNumber;
 	//initialize sup_exceptContext 
 	memaddr ramtop;
 	RAMTOP(ramtop);
 	memaddr PENULTIMATE_RAM_FRAME = ramtop - PAGESIZE;
 	//TODO: set pc to address of support_level_tlb_handler (I put 0 as placeholder)
-	uproc_sup.sup_exceptContext[0] = (context_t) {.pc = 0, .status = STATUS_INTERRUPT_ON_NEXT,
+	uproc_sup->sup_exceptContext[0] = (context_t) {.pc = 0, .status = STATUS_INTERRUPT_ON_NEXT,
 	.stackPtr = PENULTIMATE_RAM_FRAME - (procNumber-1)*PAGESIZE};
 	//TODO: set pc to address of support_level_general_handler (I put 0 as placeholder)	
-	uproc_sup.sup_exceptContext[1] = (context_t) {.pc = 0, .status = STATUS_INTERRUPT_ON_NEXT,
+	uproc_sup->sup_exceptContext[1] = (context_t) {.pc = 0, .status = STATUS_INTERRUPT_ON_NEXT,
 	.stackPtr = PENULTIMATE_RAM_FRAME - (procNumber-1)*PAGESIZE + 0.5*PAGESIZE};
 	//initialize pgTbl
-	setUpPageTable(&uproc_sup);
-	uproc_sup_array[procNumber-1] = uproc_sup;
+	setUpPageTable(uproc_sup);
 
-	pcb_t* uproc = create_process(&uproc_state, &uproc_sup); 
+	pcb_t* uproc = create_process(&uproc_state, uproc_sup); 
 }
