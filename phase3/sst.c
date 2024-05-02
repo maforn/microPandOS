@@ -11,7 +11,7 @@
 //-> avremo la prima page per gli stack del primo u-proc, la seconda per gli stack del secondo e così via...
 
 void setUpPageTable(support_t *uproc) {
-  for (int i = 0; i < USERPGTBLSIZE; i++) {
+  for (int i = 0; i < USERPGTBLSIZE-1; i++) {
     // TODO: check shift
     uproc->sup_privatePgTbl[i].pte_entryHI =
         ((UPROCSTARTADDR + i * PAGESIZE) << VPNSHIFT) +
@@ -21,6 +21,7 @@ void setUpPageTable(support_t *uproc) {
   // set the last VPN to 0xBFFFF000
   uproc->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryHI =
       ((USERSTACKTOP - PAGESIZE) << VPNSHIFT) + (uproc->sup_asid << ASIDSHIFT);
+  uproc->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryLO = DIRTYON;
 }
 
 extern pcb_t* ssi_pcb;
@@ -39,6 +40,9 @@ pcb_t *create_process(state_t *s, support_t *sup) {
   SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&p), 0);
   return p;
 }
+
+extern support_t uproc_sup_array[UPROCMAX];
+//TODO: change name of uproc_sup in initial.c to uproc_sup_array
 
 /*
  * SST creation
@@ -72,6 +76,7 @@ void create_SST(unsigned short procNumber) {
 	.stackPtr = PENULTIMATE_RAM_FRAME - (procNumber-1)*PAGESIZE + 0.5*PAGESIZE};
 	//initialize pgTbl
 	setUpPageTable(&uproc_sup);
+	uproc_sup_array[procNumber-1] = uproc_sup;
 
 	pcb_t* uproc = create_process(&uproc_state, &uproc_sup); 
 }
