@@ -152,6 +152,10 @@ void writeTerminal(pcb_t* sender, void* arg) {
 void SSTRequest(pcb_t* sender, int service, void* arg) {
 	switch (service) {
 		case GET_TOD:
+			long unsigned int tod;
+			STCK(tod);
+
+			SYSCALL(SENDMESSAGE, sender, &tod, 0);
 			break;
 		case TERMINATE:
 			terminateSST();
