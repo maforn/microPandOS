@@ -33,7 +33,7 @@ kernel : ./phase1/msg.o ./phase1/pcb.o ./phase2/initial.o ./phase2/ssi.o ./phase
 	$(LD) -o $@ $^ $(LDFLAGS)
 
 clean :
-	-rm -f *.o ./phase1/*.o ./phase2/*.o kernel kernel.*.uriscv
+	-rm -f *.o ./phase1/*.o ./phase2/*.o kernel kernel.*.uriscv ./*uriscv
 
 # Pattern rule for assembly modules
 %.o : %.S

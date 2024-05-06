@@ -1,5 +1,7 @@
 #include "./headers/initProc.h"
 #include "../phase2/headers/initial.h"
+#include "./headers/sst.h"
+#include "./headers/vmSupport.h"
 #include <uriscv/liburiscv.h>
 
 pcb_PTR initiator_pcb, swap_mutex_pcb, sst_pcbs[UPROCMAX];
@@ -8,7 +10,7 @@ extern pcb_t *ssi_pcb;
 
 state_t sst_state[UPROCMAX], mutex_state;
 // TODO: check if more camps are required such as sup_stackTLB
-static support_t uproc_sup[UPROCMAX];
+static support_t uproc_sup_array[UPROCMAX];
 
 pcb_t *create_process(state_t *s, support_t *sup) {
   pcb_t *p;
@@ -39,8 +41,9 @@ void swap_mutex() {
 
 void InitiatorProcess() {
   initiator_pcb = current_process;
-  // TODO: initialize the Swap Pool
 
+  // Initialize the Swap Pool
+  initSwapStructs();
   // initialize the state for the mutex pcb
   STST(&mutex_state);
   mutex_state.reg_sp = mutex_state.reg_sp - PAGESIZE / 4;
@@ -57,15 +60,14 @@ void InitiatorProcess() {
 
   // create the 8 SST for the Uprocs
   for (int i = 0; i < UPROCMAX; i++) {
-    // TODO: substitute sst_start with correct function and check stack pointer,
-    // check Kernel mode
     STST(&sst_state[i]);
     sst_state[i].reg_sp = sst_state[i].reg_sp - PAGESIZE / 4;
-    sst_state[i].pc_epc = (memaddr)sst_start;
+    sst_state[i].pc_epc = (memaddr)create_SST;
     sst_state[i].status |= MSTATUS_MIE_MASK | MSTATUS_MPP_M;
     sst_state[i].mie = MIE_ALL;
-    // SST shares the same support struct of its uproc 
-    sst_pcbs[i] = create_process(&sst_state[i], &uproc_sup[i]);
+    // SST shares the same support struct of its uproc
+    uproc_sup_array[i].sup_asid = i + 1;
+    sst_pcbs[i] = create_process(&sst_state[i], &uproc_sup_array[i]);
   }
 
   //  Wait for 8 messages, that should be send when each SST is terminated.
