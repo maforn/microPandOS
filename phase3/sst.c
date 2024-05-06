@@ -135,36 +135,21 @@ void writeOnDevice(unsigned short device_number, pcb_t* sender, void* arg) {
     }
 }
 
-void writePrinter(pcb_t* sender, void* arg) {
-	unsigned short device_number = 3;
-
-	//write on terminal
-	writeOnDevice(device_number, sender, arg);
-}
-
-void writeTerminal(pcb_t* sender, void* arg) {
-	unsigned short device_number = 4;
-
-	//write on terminal
-	writeOnDevice(device_number, sender, arg);
-}
-
 void SSTRequest(pcb_t* sender, int service, void* arg) {
 	switch (service) {
 		case GET_TOD:
 			long unsigned int tod;
 			STCK(tod);
-
 			SYSCALL(SENDMESSAGE, sender, &tod, 0);
 			break;
 		case TERMINATE:
 			terminateSST();
 			break;
 		case WRITEPRINTER:
-			writePrinter(sender, arg);
+			writeOnDevice(DEV_N_PRINTER, sender, arg);
 			break;
 		case WRITETERMINAL:
-			writeTerminal(sender, arg);
+			writeOnDevice(DEV_N_TERMINAL, sender, arg);
 			break;
 	}
 }
