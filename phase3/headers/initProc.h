@@ -6,6 +6,7 @@
 pcb_t *create_process(state_t *s, support_t *sup);
 extern pcb_t *swap_mutex_pcb;
 extern pcb_t *initiator_pcb;
-extern support_t uproc_sup_array[UPROCMAX];
+
+#define HALFPAGESIZE (PAGESIZE / 2)
 
 #endif

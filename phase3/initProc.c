@@ -1,4 +1,5 @@
 #include "./headers/initProc.h"
+#include "./headers/sysSupport.h"
 #include "../phase2/headers/initial.h"
 #include "./headers/sst.h"
 #include "./headers/vmSupport.h"
@@ -9,8 +10,6 @@ pcb_PTR initiator_pcb, swap_mutex_pcb, sst_pcbs[UPROCMAX];
 extern pcb_t *ssi_pcb;
 
 state_t sst_state[UPROCMAX], mutex_state;
-// TODO: check if more camps are required such as sup_stackTLB
-static support_t uproc_sup_array[UPROCMAX];
 
 pcb_t *create_process(state_t *s, support_t *sup) {
   pcb_t *p;
@@ -25,6 +24,23 @@ pcb_t *create_process(state_t *s, support_t *sup) {
   SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)&payload, 0);
   SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&p), 0);
   return p;
+}
+
+
+static support_t uproc_sup_array[UPROCMAX];
+
+void setUpPageTable(support_t *uproc) {
+  for (int i = 0; i < USERPGTBLSIZE - 1; i++) {
+    // TODO: check shift
+    uproc->sup_privatePgTbl[i].pte_entryHI =
+        ((UPROCSTARTADDR + i * PAGESIZE) << VPNSHIFT) +
+        (uproc->sup_asid << ASIDSHIFT);
+    uproc->sup_privatePgTbl[i].pte_entryLO = DIRTYON;
+  }
+  // set the last VPN to 0xBFFFF000
+  uproc->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryHI =
+      ((USERSTACKTOP - PAGESIZE) << VPNSHIFT) + (uproc->sup_asid << ASIDSHIFT);
+  uproc->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryLO = DIRTYON;
 }
 
 void swap_mutex() {
@@ -59,6 +75,9 @@ void InitiatorProcess() {
   // can be delegated directly to the SST processes to simplify the project).
 
   // create the 8 SST for the Uprocs
+  memaddr ramtop;
+  RAMTOP(ramtop);
+  memaddr PENULTIMATE_RAM_FRAME = ramtop - PAGESIZE;
   for (int i = 0; i < UPROCMAX; i++) {
     STST(&sst_state[i]);
     sst_state[i].reg_sp = sst_state[i].reg_sp - PAGESIZE / 4;
@@ -67,6 +86,21 @@ void InitiatorProcess() {
     sst_state[i].mie = MIE_ALL;
     // SST shares the same support struct of its uproc
     uproc_sup_array[i].sup_asid = i + 1;
+    
+
+  uproc_sup_array[i].sup_exceptContext[0] = (context_t){
+      .pc = (memaddr)TLB_ExceptionHandler,
+      .status = STATUS_INTERRUPT_ON_NEXT,
+      .stackPtr = PENULTIMATE_RAM_FRAME - i * PAGESIZE
+    };
+
+  uproc_sup_array[i].sup_exceptContext[1] = (context_t){
+      .pc = (memaddr)generalExceptionHandler,
+      .status = STATUS_INTERRUPT_ON_NEXT,
+      .stackPtr = PENULTIMATE_RAM_FRAME - i * PAGESIZE + HALFPAGESIZE
+    };
+  // initialize pgTbl
+  setUpPageTable(&uproc_sup_array[i]);
     sst_pcbs[i] = create_process(&sst_state[i], &uproc_sup_array[i]);
   }
 

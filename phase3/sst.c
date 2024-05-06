@@ -9,20 +9,6 @@
 
 typedef unsigned int devregtr;
 
-void setUpPageTable(support_t *uproc) {
-  for (int i = 0; i < USERPGTBLSIZE - 1; i++) {
-    // TODO: check shift
-    uproc->sup_privatePgTbl[i].pte_entryHI =
-        ((UPROCSTARTADDR + i * PAGESIZE) << VPNSHIFT) +
-        (uproc->sup_asid << ASIDSHIFT);
-    uproc->sup_privatePgTbl[i].pte_entryLO = DIRTYON;
-  }
-  // set the last VPN to 0xBFFFF000
-  uproc->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryHI =
-      ((USERSTACKTOP - PAGESIZE) << VPNSHIFT) + (uproc->sup_asid << ASIDSHIFT);
-  uproc->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryLO = DIRTYON;
-}
-
 extern pcb_t *ssi_pcb;
 
 pcb_t *uproc;
@@ -46,25 +32,6 @@ void create_SST() {
   uproc_state.mie = MIE_ALL;
   // set entry hi asid to i
   uproc_state.entry_hi = procNumber << ASIDSHIFT;
-
-  // initialize sup_exceptContext
-  memaddr ramtop;
-  RAMTOP(ramtop);
-  memaddr PENULTIMATE_RAM_FRAME = ramtop - PAGESIZE;
-
-  current_process->p_supportStruct->sup_exceptContext[0] = (context_t){
-      .pc = (memaddr)TLB_ExceptionHandler,
-      .status = STATUS_INTERRUPT_ON_NEXT,
-      .stackPtr = PENULTIMATE_RAM_FRAME - (procNumber - 1) * PAGESIZE
-    };
-
-  current_process->p_supportStruct->sup_exceptContext[1] = (context_t){
-      .pc = (memaddr)generalExceptionHandler,
-      .status = STATUS_INTERRUPT_ON_NEXT,
-      .stackPtr = PENULTIMATE_RAM_FRAME - (procNumber - 1) * PAGESIZE + 0.5 * PAGESIZE
-    };
-  // initialize pgTbl
-  setUpPageTable(current_process->p_supportStruct);
 
   uproc = create_process(&uproc_state, current_process->p_supportStruct);
 
