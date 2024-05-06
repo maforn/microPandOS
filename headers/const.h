@@ -76,6 +76,10 @@
 #define IL_PRINTER 20
 #define IL_TERMINAL 21
 
+/* device numbers */
+#define DEV_N_PRINTER 3
+#define DEV_N_TERMINAL 4
+
 #define MSTATUS_MIE_MASK 0x8
 #define MSTATUS_MPIE_MASK 0x80
 #define MSTATUS_MPP_MASK 0x1800

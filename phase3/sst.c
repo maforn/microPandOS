@@ -8,12 +8,6 @@
 
 typedef unsigned int devregtr;
 
-//salviamo in RAM stack_tlbExceptHandler e stack_generalExceptHandler di ogni u-proc
-//a partire da PENULTIMATE_RAM_FRAME... 
-//ci calcoliamo, a seconda del processo, l'indirizzo di memoria, sapendo che i due stack occupano
-//entrambi mezza pagesize, quindi insieme avranno la size di una pagesize
-//-> avremo la prima page per gli stack del primo u-proc, la seconda per gli stack del secondo e così via...
-
 void setUpPageTable(support_t *uproc) {
   for (int i = 0; i < USERPGTBLSIZE-1; i++) {
     // TODO: check shift
@@ -97,6 +91,12 @@ void SST_service_entry_point() {
 	
 extern pcb_t* initiator_pcb;
 
+void getTOD(pcb_t* sender) {
+	long unsigned int tod;
+	STCK(tod);
+	SYSCALL(SENDMESSAGE, (unsigned int) sender, (unsigned int) &tod, 0);
+}
+
 //Terminate SST and child
 void terminateSST() {
 	//sending message to initProc to communicate the termination of the SST
@@ -133,14 +133,15 @@ void writeOnDevice(unsigned short device_number, pcb_t* sender, void* arg) {
 
 		string++;
     }
+
+	//write to the sender that is awaiting an empty response
+	SYSCALL(SENDMESSAGE, (unsigned int)sender, 0, 0);
 }
 
 void SSTRequest(pcb_t* sender, int service, void* arg) {
 	switch (service) {
 		case GET_TOD:
-			long unsigned int tod;
-			STCK(tod);
-			SYSCALL(SENDMESSAGE, sender, &tod, 0);
+			getTOD(sender);
 			break;
 		case TERMINATE:
 			terminateSST();
