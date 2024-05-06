@@ -1,8 +1,12 @@
 #include "../headers/types.h"
 #include <uriscv/liburiscv.h>
 #include "../phase2/headers/ssi.h"
+#include <uriscv/arch.h>
 
 #define STATUS_INTERRUPT_ON_NEXT (MSTATUS_MPIE_MASK + MSTATUS_MPP_M)
+#define TERMSTATMASK 0xFF
+
+typedef unsigned int devregtr;
 
 //salviamo in RAM stack_tlbExceptHandler e stack_generalExceptHandler di ogni u-proc
 //a partire da PENULTIMATE_RAM_FRAME... 
@@ -93,23 +97,70 @@ void SST_service_entry_point() {
 	
 extern pcb_t* initiator_pcb;
 
+//Terminate SST and child
+void terminateSST() {
+	//sending message to initProc to communicate the termination of the SST
+	SYSCALL(SENDMESSAGE, (unsigned int)initiator_pcb, 0,0);
+	//terminate sst (current process) and its progeny
+	ssi_payload_t term_process_payload = {
+		.service_code = TERMPROCESS,
+		.arg = (void *)NULL,
+	};
+	SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&term_process_payload), 0);
+}
+
+void writeOnDevice(unsigned short device_number, pcb_t* sender, void* arg) {
+	unsigned short controller_number = sender->p_supportStruct->sup_asid - 1;
+	devregtr* controller = (devregtr *)DEV_REG_ADDR(device_number + DEV_IL_START, controller_number);
+	char* string = arg;
+	devregtr status;
+
+	while (*string != EOS){
+		devregtr value = PRINTCHR | (((devregtr)*string) << 8);
+		ssi_do_io_t do_io = {
+			.commandAddr = controller,
+			.commandValue = value,
+		};
+		ssi_payload_t payload = {
+			.service_code = DOIO,
+			.arg = &do_io,
+		};
+		SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&payload), 0);
+		SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&status), 0);
+
+		if ((status & TERMSTATMASK) != RECVD)
+			PANIC();
+
+		string++;
+    }
+}
+
+void writePrinter(pcb_t* sender, void* arg) {
+	unsigned short device_number = 3;
+
+	//write on terminal
+	writeOnDevice(device_number, sender, arg);
+}
+
+void writeTerminal(pcb_t* sender, void* arg) {
+	unsigned short device_number = 4;
+
+	//write on terminal
+	writeOnDevice(device_number, sender, arg);
+}
+
 void SSTRequest(pcb_t* sender, int service, void* arg) {
 	switch (service) {
 		case GET_TOD:
 			break;
 		case TERMINATE:
-			//sending message to initProc to communicate the termination of the SST
-			SYSCALL(SENDMESSAGE, (unsigned int)initiator_pcb, 0,0);
-			//terminate sst (current process) and its progeny
-			ssi_payload_t term_process_payload = {
-  			    .service_code = TERMPROCESS,
-  			    .arg = (void *)NULL,
-  			};
-  			SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&term_process_payload), 0);
+			terminateSST();
 			break;
 		case WRITEPRINTER:
+			writePrinter(sender, arg);
 			break;
 		case WRITETERMINAL:
+			writeTerminal(sender, arg);
 			break;
 	}
 }
