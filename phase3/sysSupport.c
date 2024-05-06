@@ -49,12 +49,14 @@ void SYSCALLExceptionHandler(state_t* proc_state){
 
         // syscall to receive the message
         SYSCALL(RECEIVEMESSAGE, (unsigned int)sender, (unsigned int)payload, 0);
+
+        //TODO: come setto il return value?
+
+        // set the return value
+        proc_state->reg_a0 = payload;
     }
 
-    //TODO: come setto il return value?
-
-    // set the return value
-    proc_state->reg_a0 = 0;
+    
 
 
     // increment the pc
