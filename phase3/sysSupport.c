@@ -1,15 +1,28 @@
 #include "headers/sysSupport.h"
 #include "../headers/const.h"
-#include "../phase2/headers/initial.h"
 #include <uriscv/liburiscv.h>
 
 void SYSCALLExceptionHandler(state_t *proc_state);
 void programTrapExceptionHandler();
 
+support_t *getSupStruct() {
+  support_t *sup_struct;
+  ssi_payload_t getsup_payload = {
+      .service_code = GETSUPPORTPTR,
+      .arg = NULL,
+  };
+  SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&getsup_payload),
+          0);
+  SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&sup_struct),
+          0);
+
+  return sup_struct;
+}
+
 void generalExceptionHandler() {
 
   // get support struct
-  support_t *support_struct = current_process->p_supportStruct;
+  support_t *support_struct = getSupStruct();
 
   // get process state
   state_t *exceptionState = &(support_struct->sup_exceptState[GENERALEXCEPT]);
@@ -26,7 +39,7 @@ void generalExceptionHandler() {
   }
 
   // load back the process state after the exception is handled
-  LDST(&(current_process->p_s));
+  LDST(&exceptionState);
 }
 
 void SYSCALLExceptionHandler(state_t *proc_state) {

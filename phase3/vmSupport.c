@@ -39,20 +39,6 @@ void update_TLB(pteEntry_t pte) {
   */
 }
 
-support_t *getSupStruct() {
-  support_t *sup_struct;
-  ssi_payload_t getsup_payload = {
-      .service_code = GETSUPPORTPTR,
-      .arg = NULL,
-  };
-  SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&getsup_payload),
-          0);
-  SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&sup_struct),
-          0);
-
-  return sup_struct;
-}
-
 unsigned int readWriteFlash(int operation, int page, int frame, int devnum) {
   devreg_t *controller = (devreg_t *)DEV_REG_ADDR(IL_FLASH, devnum);
   controller->dtp.data0 = getFrameAddr(frame);
