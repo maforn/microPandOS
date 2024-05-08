@@ -45,13 +45,16 @@ void setUpPageTable(support_t *uproc) {
 
 void swap_mutex() {
   pcb_t *p;
+  unsigned int i;
   while (1) {
     // wait for someone to request the mutual exlusion
-    SYSCALL(RECEIVEMESSAGE, ANYMESSAGE, (unsigned int)(&p), 0);
-    // give the ok to the waiting process
-    SYSCALL(SENDMESSAGE, (unsigned int)p, 0, 0);
-    // wait for the process to release the mutual exclusion
-    SYSCALL(RECEIVEMESSAGE, (unsigned int)p, 0, 0);
+    p=(pcb_t*)SYSCALL(RECEIVEMESSAGE, ANYMESSAGE, i, 0);
+    if(i == 0){
+      // give the ok to the waiting process
+      SYSCALL(SENDMESSAGE, (unsigned int)p, 0, 0);
+      // wait for the process to release the mutual exclusion
+      SYSCALL(RECEIVEMESSAGE, (unsigned int)p, 0, 0);
+    }
   }
 }
 
