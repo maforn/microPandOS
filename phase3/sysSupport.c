@@ -2,7 +2,9 @@
 #include "../headers/const.h"
 #include <uriscv/liburiscv.h>
 
-void SYSCALLExceptionHandler(state_t *proc_state);
+extern  *swap_mutex_pcb;
+
+void SYSCALLExceptionHandler(support_t *support_struct);
 void programTrapExceptionHandler();
 
 support_t *getSupStruct() {
@@ -11,10 +13,8 @@ support_t *getSupStruct() {
       .service_code = GETSUPPORTPTR,
       .arg = NULL,
   };
-  SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&getsup_payload),
-          0);
-  SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&sup_struct),
-          0);
+  SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&getsup_payload),0);
+  SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&sup_struct),0);
 
   return sup_struct;
 }
@@ -28,21 +28,27 @@ void generalExceptionHandler() {
   state_t *exceptionState = &(support_struct->sup_exceptState[GENERALEXCEPT]);
 
   // get the exception cause
-  int cause = (exceptionState->cause & GETEXECCODE) >> CAUSESHIFT;
+  int cause = exceptionState->cause;
 
   if (cause == SYSEXCEPTION) {
+
     // call the syscall exception handler
-    SYSCALLExceptionHandler(exceptionState);
+    SYSCALLExceptionHandler(support_struct);
+
+    // load back the process state after the exception is handled
+    LDST(&exceptionState);
+  
   } else {
     // call the trap exception handler
     programTrapExceptionHandler();
   }
 
-  // load back the process state after the exception is handled
-  LDST(&exceptionState);
+  
 }
 
-void SYSCALLExceptionHandler(state_t *proc_state) {
+void SYSCALLExceptionHandler(support_t *support_struct) {
+  state_t *proc_state = &(support_struct->sup_exceptState[GENERALEXCEPT]);
+
   if (proc_state->reg_a0 == SENDMSG) {
 
     // get the destination process
@@ -70,15 +76,20 @@ void SYSCALLExceptionHandler(state_t *proc_state) {
     SYSCALL(RECEIVEMESSAGE, (unsigned int)sender, (unsigned int)payload, 0);
   }
 
+  // set the result of the syscall
+  proc_state->reg_a0 = current_process->p_s.reg_a0;
+
   // increment the pc
-  current_process->p_s.pc_epc += 4;
+  proc_state->pc_epc += 4;
 }
 
 void programTrapExceptionHandler() {
-  ssi_payload_t payload;
-  payload.service_code = TERMPROCESS;
-  payload.arg = NULL;
-  SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)&payload, 0);
+  // send the release mutual exclusin message
+  SYSCALL(SENDMESSAGE, (unsigned int)swap_mutex_pcb, 1, 0);
 
-  // TODO: se sta aspettando la mutua esclusione bisogna rilasciarla
+  // send the terminate message to the parent
+  SYSCALL(SENDMESSAGE, (unsigned int)current_process->p_parent, TERMINATE, 0);
+
+  // BLock the process
+  SYSCALL(RECEIVEMESSAGE, (unsigned int)ANYMESSAGE, 0, 0);
 }
