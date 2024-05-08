@@ -3,6 +3,8 @@
 
 #define TERMSTATMASK 0xFF
 
-void create_SST();
+#define HALFPAGESIZE (PAGESIZE / 2)
+
+void SST_entry_point();
 
 #endif
