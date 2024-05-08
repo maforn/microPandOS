@@ -54,7 +54,7 @@ void InitiatorProcess() {
   STST(&mutex_state);
   mutex_state.reg_sp = mutex_state.reg_sp - PAGESIZE / 4;
   mutex_state.pc_epc = (memaddr)swap_mutex;
-  mutex_state.status |= MSTATUS_MIE_MASK | MSTATUS_MPP_M;
+  mutex_state.status = STATUS_INTERRUPT_ON_NEXT;
   mutex_state.mie = MIE_ALL;
   swap_mutex_pcb = create_process(&mutex_state, NULL);
 
@@ -69,7 +69,7 @@ void InitiatorProcess() {
     STST(&sst_state[i]);
     sst_state[i].reg_sp = sst_state[i].reg_sp - PAGESIZE / 4;
     sst_state[i].pc_epc = (memaddr)SST_entry_point;
-    sst_state[i].status |= MSTATUS_MIE_MASK | MSTATUS_MPP_M;
+    sst_state[i].status = STATUS_INTERRUPT_ON_NEXT;
     sst_state[i].mie = MIE_ALL;
     // SST shares the same support struct of its uproc
     uproc_sup_array[i].sup_asid = i + 1;
