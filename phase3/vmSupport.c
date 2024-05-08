@@ -86,7 +86,7 @@ void TLB_ExceptionHandler() {
   int cause = proc_state.cause;
 
   // (3) if it's a TLB Mod, pass to trap handler
-  if (cause != TLBINVLDL && cause != TLBINVLDS) {
+  if (cause == TLBMOD) {
     // TODO: check pass to trap hadler
     generalExceptionHandler();
   }

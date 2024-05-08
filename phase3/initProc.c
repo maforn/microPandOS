@@ -65,7 +65,7 @@ void InitiatorProcess() {
   // can be delegated directly to the SST processes to simplify the project).
 
   // create the 8 SST for the Uprocs
-  for (int i = 0; i < UPROCMAX; i++) {
+  for (int i = 0; i < 1; i++) {
     STST(&sst_state[i]);
     sst_state[i].reg_sp = sst_state[i].reg_sp - PAGESIZE / 4;
     sst_state[i].pc_epc = (memaddr)SST_entry_point;
