@@ -1,8 +1,7 @@
 #include "headers/sysSupport.h"
 #include "../headers/const.h"
+#include "headers/initProc.h"
 #include <uriscv/liburiscv.h>
-
-extern  *swap_mutex_pcb;
 
 void SYSCALLExceptionHandler(support_t *support_struct);
 void programTrapExceptionHandler();
@@ -13,8 +12,10 @@ support_t *getSupStruct() {
       .service_code = GETSUPPORTPTR,
       .arg = NULL,
   };
-  SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&getsup_payload),0);
-  SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&sup_struct),0);
+  SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&getsup_payload),
+          0);
+  SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&sup_struct),
+          0);
 
   return sup_struct;
 }
@@ -37,13 +38,11 @@ void generalExceptionHandler() {
 
     // load back the process state after the exception is handled
     LDST(&exceptionState);
-  
+
   } else {
     // call the trap exception handler
     programTrapExceptionHandler();
   }
-
-  
 }
 
 void SYSCALLExceptionHandler(support_t *support_struct) {
