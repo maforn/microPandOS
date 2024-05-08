@@ -15,14 +15,29 @@ pcb_t *uproc;
 
 void SST_service();
 
+void setUpPageTable(support_t *uproc) {
+  for (int i = 0; i < USERPGTBLSIZE - 1; i++) {
+    // TODO: check shift
+    uproc->sup_privatePgTbl[i].pte_entryHI =
+        ((UPROCSTARTADDR + i * PAGESIZE) << VPNSHIFT) +
+        (uproc->sup_asid << ASIDSHIFT);
+    uproc->sup_privatePgTbl[i].pte_entryLO = DIRTYON;
+  }
+  // set the last VPN to 0xBFFFF000
+  uproc->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryHI =
+      ((USERSTACKTOP - PAGESIZE) << VPNSHIFT) + (uproc->sup_asid << ASIDSHIFT);
+  uproc->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryLO = DIRTYON;
+}
+
 /*
  * SST creation
  * first the corresponding child u-proc is created
  * then the SST waits for service requests from its child process
  */
-void create_SST() {
+void SST_entry_point() {
   // obtain the asid
-  int procNumber = current_process->p_supportStruct->sup_asid;
+  support_t *proc_sup = getSupStruct();
+  int procNumber = proc_sup->sup_asid;
   // initial proc state
   state_t uproc_state;
   uproc_state.reg_sp = USERSTACKTOP;
@@ -33,7 +48,23 @@ void create_SST() {
   // set entry hi asid to i
   uproc_state.entry_hi = procNumber << ASIDSHIFT;
 
-  uproc = create_process(&uproc_state, current_process->p_supportStruct);
+  // initialize uproc support struct
+  memaddr ramtop;
+  RAMTOP(ramtop);
+  memaddr PENULTIMATE_RAM_FRAME = ramtop - PAGESIZE;
+  proc_sup->sup_exceptContext[0] =
+      (context_t){.pc = (memaddr)TLB_ExceptionHandler,
+                  .status = STATUS_INTERRUPT_ON_NEXT,
+                  .stackPtr = PENULTIMATE_RAM_FRAME - procNumber * PAGESIZE};
+
+  proc_sup->sup_exceptContext[1] = (context_t){
+      .pc = (memaddr)generalExceptionHandler,
+      .status = STATUS_INTERRUPT_ON_NEXT,
+      .stackPtr = PENULTIMATE_RAM_FRAME - procNumber * PAGESIZE + HALFPAGESIZE};
+  // initialize pgTbl
+  setUpPageTable(proc_sup);
+
+  uproc = create_process(&uproc_state, proc_sup);
 
   SST_service();
 }
