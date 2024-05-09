@@ -78,9 +78,9 @@ void terminateProcess(pcb_t *proc) {
 static inline void removeFromMessageQueue(pcb_t *process) {
 	outProcQ(&waiting_MSG, process);
 	if (outProcQ(&ready_queue, process) != NULL)
-		process->prev_queue = 1;
+		process->blocked = 2;
 	else
-		process->prev_queue = 0;
+		process->blocked = 1;
 }
 
 /**
@@ -97,7 +97,6 @@ void doIO(pcb_t *sender, ssi_do_io_t *do_io) {
 	unsigned short controller_number = (((unsigned int)do_io->commandAddr - START_DEVREG) / DEVREGSIZE) % DEVPERINT;
 	
 	// block the process and insert its pcb in the appropriate waiting list
-	sender->blocked = 1;
 	insertProcQ(&blocked_pcbs[device_number][controller_number], sender);
 
 	// write command value on the device address specified as the command address
@@ -112,9 +111,10 @@ void doIO(pcb_t *sender, ssi_do_io_t *do_io) {
 */
 static inline void unblockProcessFromDevice(ssi_unblock_do_io_t *do_io) {
 	pcb_t *proc = removeProcQ(&blocked_pcbs[do_io->device][do_io->controller]);
-	if (proc->prev_queue)
+	if (proc->blocked == 2) {
+		proc->blocked = 0;
 		insertProcQ(&ready_queue, proc);
-	else
+	} else
 		insertProcQ(&waiting_MSG, proc);
 	soft_block_count--;
 	SYSCALL(SENDMESSAGE, (unsigned int)proc, (unsigned int)do_io->status, 0);
@@ -129,9 +129,10 @@ static inline void unblockProcessFromTimer() {
 	// while there are still processes in the waiting queue, unlock them
 	while ( !emptyProcQ( &waiting_IT ) ) {
 		pcb_t* process = removeProcQ(&waiting_IT);
-		if (process->prev_queue)
+		if (process->blocked == 2) {
+			process->blocked = 0;
 			insertProcQ(&ready_queue, process);
-		else
+		}	else
 			insertProcQ(&waiting_MSG, process);
 		soft_block_count--;
 		SYSCALL(SENDMESSAGE, (unsigned int)process, 0, 0);
@@ -154,7 +155,6 @@ static inline void getCPUTime(pcb_t* sender){
 static inline void waitForClock(pcb_t* sender){
 	removeFromMessageQueue(sender);
 	soft_block_count++;
-	sender->blocked = 1;
 	insertProcQ(&waiting_IT, sender);
 }
 

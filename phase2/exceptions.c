@@ -198,7 +198,7 @@ void receiveMessage(state_t *proc_state) {
 
     // block process if it is not already blocked by the ssi in waitForClock or
     // doIO
-    if (!current_process->blocked) {
+    if (current_process->blocked == 0) {
       insertProcQ(&waiting_MSG, current_process);
       current_process->blocked = 1;
     }

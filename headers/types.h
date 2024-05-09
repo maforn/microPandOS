@@ -72,10 +72,7 @@ typedef struct pcb_t
     int p_pid;
 
     /* whether the process is blocked waiting for an event */
-    short blocked;
-
-    /* whether the process was in ready queue before being blocked*/
-    short prev_queue;
+    int blocked;
 } pcb_t, *pcb_PTR;
 
 /* message entry type */
