@@ -72,7 +72,7 @@ void SYSCALLExceptionHandler(support_t *support_struct) {
     // get the sender process
     pcb_t *sender = (pcb_t *)proc_state->reg_a1;
 
-    unsigned int *payload = (unsigned int *)current_process->p_s.reg_a2;
+    unsigned int *payload = (unsigned int *)proc_state->reg_a2;
 
     // syscall to receive the message
     SYSCALL(RECEIVEMESSAGE, (unsigned int)sender, (unsigned int)payload, 0);
