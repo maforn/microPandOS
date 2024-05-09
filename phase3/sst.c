@@ -120,7 +120,11 @@ void writeOnPrinter(pcb_t *sender, void *arg) {
 		SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)&payload, 0);
 		SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)&status, 0);
 	
-		// TODO: check status to make sure the operation was successful
+		// TODO: check if the commented status checking would be correct
+		// DEV_READY would be defined as 1
+		/*if (status != DEV_READY) 
+			PANIC();
+		*/
 
 		string++;
 	}
@@ -131,16 +135,14 @@ void writeOnPrinter(pcb_t *sender, void *arg) {
 
 void writeOnTerminal(pcb_t *sender, void *arg) {
   unsigned short controller_number = sender->p_supportStruct->sup_asid - 1;
-  devregtr *controller =
-      (devregtr *)DEV_REG_ADDR(DEV_N_TERMINAL + DEV_IL_START, controller_number);
+  devreg_t *controller =(devreg_t *)DEV_REG_ADDR(IL_TERMINAL, controller_number);
   char *string = arg;
   devregtr status;
 
   while (*string != EOS) {
-    devregtr value = PRINTCHR | (((devregtr)*string) << 8);
     ssi_do_io_t do_io = {
-        .commandAddr = controller,
-        .commandValue = value,
+        .commandAddr = &controller->term.transm_command,
+        .commandValue = PRINTCHR | (((devregtr)*string) << 8),
     };
     ssi_payload_t payload = {
         .service_code = DOIO,
