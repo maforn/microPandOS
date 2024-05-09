@@ -11,7 +11,7 @@ typedef unsigned int devregtr;
 
 extern pcb_t *ssi_pcb;
 
-pcb_t *uproc;
+static pcb_t *uproc;
 
 void SST_service();
 
@@ -19,13 +19,13 @@ void setUpPageTable(support_t *uproc) {
   for (int i = 0; i < USERPGTBLSIZE - 1; i++) {
     // TODO: check shift
     uproc->sup_privatePgTbl[i].pte_entryHI =
-        ((UPROCSTARTADDR + i * PAGESIZE) << VPNSHIFT) +
+        (UPROCSTARTADDR + i * PAGESIZE) +
         (uproc->sup_asid << ASIDSHIFT);
     uproc->sup_privatePgTbl[i].pte_entryLO = DIRTYON;
   }
   // set the last VPN to 0xBFFFF000
   uproc->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryHI =
-      ((USERSTACKTOP - PAGESIZE) << VPNSHIFT) + (uproc->sup_asid << ASIDSHIFT);
+      (USERSTACKTOP - PAGESIZE) + (uproc->sup_asid << ASIDSHIFT);
   uproc->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryLO = DIRTYON;
 }
 
@@ -55,12 +55,12 @@ void SST_entry_point() {
   proc_sup->sup_exceptContext[0] =
       (context_t){.pc = (memaddr)TLB_ExceptionHandler,
                   .status = STATUS_INTERRUPT_ON_NEXT,
-                  .stackPtr = PENULTIMATE_RAM_FRAME - procNumber * PAGESIZE};
+                  .stackPtr = PENULTIMATE_RAM_FRAME - procNumber * 2 * PAGESIZE};
 
   proc_sup->sup_exceptContext[1] = (context_t){
       .pc = (memaddr)generalExceptionHandler,
       .status = STATUS_INTERRUPT_ON_NEXT,
-      .stackPtr = PENULTIMATE_RAM_FRAME - procNumber * PAGESIZE + HALFPAGESIZE};
+      .stackPtr = PENULTIMATE_RAM_FRAME - procNumber * 2 * PAGESIZE + PAGESIZE };
   // initialize pgTbl
   setUpPageTable(proc_sup);
 

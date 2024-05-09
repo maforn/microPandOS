@@ -30,12 +30,12 @@ static support_t uproc_sup_array[UPROCMAX];
 
 void swap_mutex() {
   pcb_t *p;
-  int i;
+  int *i;
   while (1) {
     // use i to determinate if it is a forced release for mutex message
     i = 0;
     // wait for someone to request the mutual exlusion
-    p = (pcb_t *)SYSCALL(RECEIVEMESSAGE, ANYMESSAGE, i, 0);
+    p = (pcb_t *)SYSCALL(RECEIVEMESSAGE, ANYMESSAGE, (unsigned int)&i, 0);
     if (i == 0) {
       // give the ok to the waiting process
       SYSCALL(SENDMESSAGE, (unsigned int)p, 0, 0);
@@ -54,7 +54,7 @@ void InitiatorProcess() {
   STST(&mutex_state);
   mutex_state.reg_sp = mutex_state.reg_sp - PAGESIZE / 4;
   mutex_state.pc_epc = (memaddr)swap_mutex;
-  mutex_state.status |= MSTATUS_MIE_MASK | MSTATUS_MPP_M;
+  mutex_state.status = STATUS_INTERRUPT_ON_NEXT;
   mutex_state.mie = MIE_ALL;
   swap_mutex_pcb = create_process(&mutex_state, NULL);
 
@@ -65,11 +65,11 @@ void InitiatorProcess() {
   // can be delegated directly to the SST processes to simplify the project).
 
   // create the 8 SST for the Uprocs
-  for (int i = 0; i < UPROCMAX; i++) {
+  for (int i = 0; i < 1; i++) {
     STST(&sst_state[i]);
     sst_state[i].reg_sp = sst_state[i].reg_sp - PAGESIZE / 4;
     sst_state[i].pc_epc = (memaddr)SST_entry_point;
-    sst_state[i].status |= MSTATUS_MIE_MASK | MSTATUS_MPP_M;
+    sst_state[i].status = STATUS_INTERRUPT_ON_NEXT;
     sst_state[i].mie = MIE_ALL;
     // SST shares the same support struct of its uproc
     uproc_sup_array[i].sup_asid = i + 1;

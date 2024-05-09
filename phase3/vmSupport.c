@@ -86,7 +86,7 @@ void TLB_ExceptionHandler() {
   int cause = proc_state.cause;
 
   // (3) if it's a TLB Mod, pass to trap handler
-  if (cause != TLBINVLDL && cause != TLBINVLDS) {
+  if (cause == TLBMOD) {
     // TODO: check pass to trap hadler
     generalExceptionHandler();
   }
@@ -96,7 +96,7 @@ void TLB_ExceptionHandler() {
   SYSCALL(RECEIVEMESSAGE, (unsigned int)swap_mutex_pcb, 0, 0);
 
   // (5) determine missing page number
-  int p = proc_state.entry_hi & GETPAGENO;
+  int p = (proc_state.entry_hi & GETPAGENO) >> VPNSHIFT;
 
   // (6) pick a frame from swap pool
   int i = pickSwapFrame();
@@ -118,7 +118,7 @@ void TLB_ExceptionHandler() {
     // save data to corresponding flash device
     int occupying_asid = swap_table[i].sw_asid;
     int occupying_page = swap_table[i].sw_pageNo;
-    unsigned int io_status = writeToFlash(occupying_page, i, occupying_asid);
+    unsigned int io_status = writeToFlash(occupying_page, i, occupying_asid - 1);
 
     if (io_status != 1) {
       generalExceptionHandler();
@@ -127,7 +127,7 @@ void TLB_ExceptionHandler() {
   }
 
   // (9) read page p from flash device into frame i
-  unsigned int io_status = readFromFlash(p, i, sup_struct->sup_asid);
+  unsigned int io_status = readFromFlash(p, i, sup_struct->sup_asid - 1);
   // check status for errors
   if (io_status != 1) {
     generalExceptionHandler();
