@@ -55,12 +55,12 @@ void SST_entry_point() {
   proc_sup->sup_exceptContext[0] =
       (context_t){.pc = (memaddr)TLB_ExceptionHandler,
                   .status = STATUS_INTERRUPT_ON_NEXT,
-                  .stackPtr = PENULTIMATE_RAM_FRAME - procNumber * 2 * PAGESIZE};
+                  .stackPtr = PENULTIMATE_RAM_FRAME - procNumber * PAGESIZE};
 
   proc_sup->sup_exceptContext[1] = (context_t){
       .pc = (memaddr)generalExceptionHandler,
       .status = STATUS_INTERRUPT_ON_NEXT,
-      .stackPtr = PENULTIMATE_RAM_FRAME - procNumber * 2 * PAGESIZE + PAGESIZE };
+      .stackPtr = PENULTIMATE_RAM_FRAME - procNumber * PAGESIZE + HALFPAGESIZE};
   // initialize pgTbl
   setUpPageTable(proc_sup);
 

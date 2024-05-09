@@ -40,7 +40,8 @@ void update_TLB(pteEntry_t pte) {
 }
 
 unsigned int readWriteFlash(int operation, int page, int frame, int devnum) {
-  devreg_t *controller = (devreg_t *)DEV_REG_ADDR(IL_FLASH, devnum);
+  static devreg_t *controller;
+  controller = (devreg_t *)DEV_REG_ADDR(IL_FLASH, devnum);
   controller->dtp.data0 = getFrameAddr(frame);
 
   // TODO: andrà bene p?
@@ -52,7 +53,7 @@ unsigned int readWriteFlash(int operation, int page, int frame, int devnum) {
       .service_code = DOIO,
       .arg = &do_io,
   };
-  unsigned int status;
+  static unsigned int status;
 
   SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&payload), 0);
   SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&status), 0);

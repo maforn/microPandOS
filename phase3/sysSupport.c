@@ -89,14 +89,15 @@ void programTrapExceptionHandler() {
   // send the release mutual exclusin message
   SYSCALL(SENDMESSAGE, (unsigned int)swap_mutex_pcb, 1, 0);
 
-  //get parent pcb
-  pcb_t *parent = getParentID();
-
+  ssi_payload_t sst_payload = {
+  .service_code = TERMINATE,
+  .arg = 0,
+  };
   // send the terminate message to the parent
-  SYSCALL(SENDMESSAGE, (unsigned int)parent, TERMINATE, 0);
+  SYSCALL(SENDMESSAGE, (unsigned int)current_process->p_parent, (unsigned int)&sst_payload, 0);
 
   // BLock the process
-  SYSCALL(RECEIVEMESSAGE, (unsigned int)parent, 0, 0);
+  SYSCALL(RECEIVEMESSAGE, (unsigned int)current_process->p_parent, 0, 0);
 }
 
 pcb_t *getParentID() {
