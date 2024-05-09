@@ -96,7 +96,7 @@ void TLB_ExceptionHandler() {
   SYSCALL(RECEIVEMESSAGE, (unsigned int)swap_mutex_pcb, 0, 0);
 
   // (5) determine missing page number
-  int p = proc_state.entry_hi & GETPAGENO;
+  int p = (proc_state.entry_hi & GETPAGENO) >> VPNSHIFT;
 
   // (6) pick a frame from swap pool
   int i = pickSwapFrame();

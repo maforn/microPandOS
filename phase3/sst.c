@@ -11,7 +11,7 @@ typedef unsigned int devregtr;
 
 extern pcb_t *ssi_pcb;
 
-pcb_t *uproc;
+static pcb_t *uproc;
 
 void SST_service();
 
