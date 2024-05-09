@@ -118,7 +118,7 @@ void TLB_ExceptionHandler() {
     // save data to corresponding flash device
     int occupying_asid = swap_table[i].sw_asid;
     int occupying_page = swap_table[i].sw_pageNo;
-    unsigned int io_status = writeToFlash(occupying_page, i, occupying_asid);
+    unsigned int io_status = writeToFlash(occupying_page, i, occupying_asid - 1);
 
     if (io_status != 1) {
       generalExceptionHandler();
@@ -127,7 +127,7 @@ void TLB_ExceptionHandler() {
   }
 
   // (9) read page p from flash device into frame i
-  unsigned int io_status = readFromFlash(p, i, sup_struct->sup_asid);
+  unsigned int io_status = readFromFlash(p, i, sup_struct->sup_asid - 1);
   // check status for errors
   if (io_status != 1) {
     generalExceptionHandler();

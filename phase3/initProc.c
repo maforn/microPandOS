@@ -33,10 +33,10 @@ void swap_mutex() {
   int *i;
   while (1) {
     // use i to determinate if it is a forced release for mutex message
-    *i = 0;
+    i = 0;
     // wait for someone to request the mutual exlusion
     p = (pcb_t *)SYSCALL(RECEIVEMESSAGE, ANYMESSAGE, (unsigned int)&i, 0);
-    if (*i == 0) {
+    if (i == 0) {
       // give the ok to the waiting process
       SYSCALL(SENDMESSAGE, (unsigned int)p, 0, 0);
       // wait for the process to release the mutual exclusion

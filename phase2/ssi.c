@@ -77,6 +77,10 @@ void terminateProcess(pcb_t *proc) {
 */
 static inline void removeFromMessageQueue(pcb_t *process) {
 	outProcQ(&waiting_MSG, process);
+	if (outProcQ(&ready_queue, process) != NULL)
+		process->prev_queue = 1;
+	else
+		process->prev_queue = 0;
 }
 
 /**
@@ -108,7 +112,10 @@ void doIO(pcb_t *sender, ssi_do_io_t *do_io) {
 */
 static inline void unblockProcessFromDevice(ssi_unblock_do_io_t *do_io) {
 	pcb_t *proc = removeProcQ(&blocked_pcbs[do_io->device][do_io->controller]);
-	insertProcQ(&waiting_MSG, proc);
+	if (proc->prev_queue)
+		insertProcQ(&ready_queue, proc);
+	else
+		insertProcQ(&waiting_MSG, proc);
 	soft_block_count--;
 	SYSCALL(SENDMESSAGE, (unsigned int)proc, (unsigned int)do_io->status, 0);
 }
@@ -122,7 +129,10 @@ static inline void unblockProcessFromTimer() {
 	// while there are still processes in the waiting queue, unlock them
 	while ( !emptyProcQ( &waiting_IT ) ) {
 		pcb_t* process = removeProcQ(&waiting_IT);
-		insertProcQ(&waiting_MSG, process);
+		if (process->prev_queue)
+			insertProcQ(&ready_queue, process);
+		else
+			insertProcQ(&waiting_MSG, process);
 		soft_block_count--;
 		SYSCALL(SENDMESSAGE, (unsigned int)process, 0, 0);
 	}
