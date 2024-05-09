@@ -5,6 +5,7 @@
 
 void SYSCALLExceptionHandler(support_t *support_struct);
 void programTrapExceptionHandler();
+pcb_t *getParentID();
 
 support_t *getSupStruct() {
   support_t *sup_struct;
@@ -54,8 +55,10 @@ void SYSCALLExceptionHandler(support_t *support_struct) {
     pcb_t *destination = (pcb_t *)proc_state->reg_a1;
 
     if (destination == PARENT) {
+      pcb_t *parent = getParentID();
+
       // send the message to the parent
-      destination = current_process->p_parent;
+      destination = parent;
     }
 
     // get the payload
@@ -86,9 +89,27 @@ void programTrapExceptionHandler() {
   // send the release mutual exclusin message
   SYSCALL(SENDMESSAGE, (unsigned int)swap_mutex_pcb, 1, 0);
 
+  //get parent pcb
+  pcb_t *parent = getParentID();
+
   // send the terminate message to the parent
-  SYSCALL(SENDMESSAGE, (unsigned int)current_process->p_parent, TERMINATE, 0);
+  SYSCALL(SENDMESSAGE, (unsigned int)parent, TERMINATE, 0);
 
   // BLock the process
-  SYSCALL(RECEIVEMESSAGE, (unsigned int)ANYMESSAGE, 0, 0);
+  SYSCALL(RECEIVEMESSAGE, (unsigned int)parent, 0, 0);
+}
+
+pcb_t *getParentID() {
+
+  // send the reques to ssi to get the parent pcb
+  ssi_payload_t get_parent_payload = {
+      .service_code = GETPROCESSID,
+      .arg = (void*)1,
+  };
+  SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&get_parent_payload),0);
+
+  // receive the parent pcb
+  pcb_t *parent;
+  SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&parent), 0);
+  return parent;
 }
