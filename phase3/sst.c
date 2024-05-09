@@ -85,7 +85,7 @@ extern pcb_t *initiator_pcb;
 void getTOD(pcb_t *sender) {
   long unsigned int tod;
   STCK(tod);
-  SYSCALL(SENDMESSAGE, (unsigned int)sender, (unsigned int)&tod, 0);
+  SYSCALL(SENDMESSAGE, (unsigned int)sender, tod, 0);
 }
 
 // Terminate SST and child
