@@ -19,14 +19,14 @@ void setUpPageTable(support_t *uproc) {
   for (int i = 0; i < USERPGTBLSIZE - 1; i++) {
     // TODO: check shift
     uproc->sup_privatePgTbl[i].pte_entryHI =
-        (UPROCSTARTADDR + i * PAGESIZE) +
+        (0x80000000 + i * PAGESIZE) +
         (uproc->sup_asid << ASIDSHIFT);
-    uproc->sup_privatePgTbl[i].pte_entryLO = DIRTYON;
+    uproc->sup_privatePgTbl[i].pte_entryLO = DIRTYON | GLOBALON;
   }
   // set the last VPN to 0xBFFFF000
   uproc->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryHI =
       (USERSTACKTOP - PAGESIZE) + (uproc->sup_asid << ASIDSHIFT);
-  uproc->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryLO = DIRTYON;
+  uproc->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryLO = DIRTYON | GLOBALON;
 }
 
 /*
@@ -55,12 +55,12 @@ void SST_entry_point() {
   proc_sup->sup_exceptContext[0] =
       (context_t){.pc = (memaddr)TLB_ExceptionHandler,
                   .status = STATUS_INTERRUPT_ON_NEXT,
-                  .stackPtr = PENULTIMATE_RAM_FRAME - procNumber * 2 * PAGESIZE};
+                  .stackPtr = PENULTIMATE_RAM_FRAME - procNumber * PAGESIZE};
 
   proc_sup->sup_exceptContext[1] = (context_t){
       .pc = (memaddr)generalExceptionHandler,
       .status = STATUS_INTERRUPT_ON_NEXT,
-      .stackPtr = PENULTIMATE_RAM_FRAME - procNumber * 2 * PAGESIZE + PAGESIZE };
+      .stackPtr = PENULTIMATE_RAM_FRAME - procNumber * PAGESIZE + HALFPAGESIZE};
   // initialize pgTbl
   setUpPageTable(proc_sup);
 

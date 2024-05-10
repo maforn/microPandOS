@@ -16,10 +16,14 @@ static inline pteEntry_t getPteEntry(pcb_t *process, int i) {
 void uTLB_RefillHandler() {
   state_t *proc_state = (state_t *)BIOSDATAPAGE;
   // get page number
-  int p = (proc_state->entry_hi & GETPAGENO) >> VPNSHIFT;
+  int p = proc_state->entry_hi & GETPAGENO;
+  int i = 0;
+  while (i < USERPGTBLSIZE && ((getPteEntry(current_process, i).pte_entryHI & GETPAGENO) != p)) {
+    i++;
+  }
   // set the new entry HI end LO, write to the TLB and Load back the process
-  setENTRYHI(getPteEntry(current_process, p).pte_entryHI);
-  setENTRYLO(getPteEntry(current_process, p).pte_entryLO);
+  setENTRYHI(getPteEntry(current_process, i).pte_entryHI);
+  setENTRYLO(getPteEntry(current_process, i).pte_entryLO);
   TLBWR();
   LDST(proc_state);
 }
