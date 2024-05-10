@@ -19,7 +19,7 @@ void setUpPageTable(support_t *uproc) {
   for (int i = 0; i < USERPGTBLSIZE - 1; i++) {
     // TODO: check shift
     uproc->sup_privatePgTbl[i].pte_entryHI =
-        (UPROCSTARTADDR + i * PAGESIZE) +
+        (0x80000000 + i * PAGESIZE) +
         (uproc->sup_asid << ASIDSHIFT);
     uproc->sup_privatePgTbl[i].pte_entryLO = DIRTYON | GLOBALON;
   }
@@ -41,7 +41,7 @@ void SST_entry_point() {
   // initial proc state
   state_t uproc_state;
   uproc_state.reg_sp = USERSTACKTOP;
-  uproc_state.pc_epc = UPROCSTARTADDR + 0x000000B0;
+  uproc_state.pc_epc = UPROCSTARTADDR;
   // set all interrupts on and user mode (its mask is 0x0)
   uproc_state.status = MSTATUS_MPIE_MASK;
   uproc_state.mie = MIE_ALL;

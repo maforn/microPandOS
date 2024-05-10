@@ -54,12 +54,8 @@ void SYSCALLExceptionHandler(support_t *support_struct) {
     // get the destination process
     pcb_t *destination = (pcb_t *)proc_state->reg_a1;
 
-    if (destination == PARENT) {
-      pcb_t *parent = getParentID();
-
-      // send the message to the parent
-      destination = parent;
-    }
+    if (destination == PARENT) 
+      destination = current_process->p_parent;
 
     // get the payload
     unsigned int payload = proc_state->reg_a2;
@@ -71,6 +67,9 @@ void SYSCALLExceptionHandler(support_t *support_struct) {
 
     // get the sender process
     pcb_t *sender = (pcb_t *)proc_state->reg_a1;
+
+    if (sender == PARENT)
+      sender = current_process->p_parent;
 
     unsigned int *payload = (unsigned int *)proc_state->reg_a2;
 

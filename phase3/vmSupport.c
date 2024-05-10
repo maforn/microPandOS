@@ -97,7 +97,11 @@ void TLB_ExceptionHandler() {
   SYSCALL(RECEIVEMESSAGE, (unsigned int)swap_mutex_pcb, 0, 0);
 
   // (5) determine missing page number
-  int p = (proc_state.entry_hi & GETPAGENO) >> VPNSHIFT;
+  int e = proc_state.entry_hi & GETPAGENO;
+  int p = 0;
+  while (p < USERPGTBLSIZE && ((sup_struct->sup_privatePgTbl[p].pte_entryHI & GETPAGENO) != e)) {
+    p++;
+  }
 
   // (6) pick a frame from swap pool
   int i = pickSwapFrame();
@@ -148,10 +152,8 @@ void TLB_ExceptionHandler() {
 
   // update page table
   unsigned int elo = sup_struct->sup_privatePgTbl[p].pte_entryLO;
-  unsigned int addr = getFrameAddr(i);
-  unsigned int shifted = addr << VPNSHIFT;
   sup_struct->sup_privatePgTbl[p].pte_entryLO =
-      shifted | VALIDON | (elo & (DIRTYON | GLOBALON));
+      getFrameAddr(i) | VALIDON | (elo & (DIRTYON | GLOBALON));
 
   // update TLB
   update_TLB(sup_struct->sup_privatePgTbl[p]);
