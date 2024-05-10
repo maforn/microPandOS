@@ -53,7 +53,7 @@ unsigned int readWriteFlash(int operation, int page, int frame, int devnum) {
       .service_code = DOIO,
       .arg = &do_io,
   };
-  static unsigned int status;
+  unsigned int status;
 
   SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&payload), 0);
   SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&status), 0);
@@ -111,7 +111,7 @@ void TLB_ExceptionHandler() {
 
     // mark page as not valid and update TLB to reflect change
     swap_table[i].sw_pte->pte_entryLO &= (~VALIDON);
-    update_TLB(*swap_table[i].sw_pte);
+    update_TLB(*(swap_table[i].sw_pte));
 
     // reenable interrupts
     setSTATUS(status);
@@ -148,8 +148,10 @@ void TLB_ExceptionHandler() {
 
   // update page table
   unsigned int elo = sup_struct->sup_privatePgTbl[p].pte_entryLO;
+  unsigned int addr = getFrameAddr(i);
+  unsigned int shifted = addr << VPNSHIFT;
   sup_struct->sup_privatePgTbl[p].pte_entryLO =
-      (i << PFNSHIFT) | VALIDON | (elo & (DIRTYON | GLOBALON));
+      shifted | VALIDON | (elo & (DIRTYON | GLOBALON));
 
   // update TLB
   update_TLB(sup_struct->sup_privatePgTbl[p]);

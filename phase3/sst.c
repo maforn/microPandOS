@@ -21,12 +21,12 @@ void setUpPageTable(support_t *uproc) {
     uproc->sup_privatePgTbl[i].pte_entryHI =
         (UPROCSTARTADDR + i * PAGESIZE) +
         (uproc->sup_asid << ASIDSHIFT);
-    uproc->sup_privatePgTbl[i].pte_entryLO = DIRTYON;
+    uproc->sup_privatePgTbl[i].pte_entryLO = DIRTYON | GLOBALON;
   }
   // set the last VPN to 0xBFFFF000
   uproc->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryHI =
       (USERSTACKTOP - PAGESIZE) + (uproc->sup_asid << ASIDSHIFT);
-  uproc->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryLO = DIRTYON;
+  uproc->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryLO = DIRTYON | GLOBALON;
 }
 
 /*
@@ -41,7 +41,7 @@ void SST_entry_point() {
   // initial proc state
   state_t uproc_state;
   uproc_state.reg_sp = USERSTACKTOP;
-  uproc_state.pc_epc = UPROCSTARTADDR;
+  uproc_state.pc_epc = UPROCSTARTADDR + 0x000000B0;
   // set all interrupts on and user mode (its mask is 0x0)
   uproc_state.status = MSTATUS_MPIE_MASK;
   uproc_state.mie = MIE_ALL;
