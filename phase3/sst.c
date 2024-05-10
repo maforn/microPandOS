@@ -153,7 +153,7 @@ void writeOnTerminal(pcb_t *sender, void *arg) {
 
     if ((status & TERMSTATMASK) != RECVD)
       // TODO: PANIC? or generalExceptionHandler?
-      PANIC();
+      generalExceptionHandler();
 
     string++;
   }
