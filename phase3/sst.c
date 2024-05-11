@@ -37,7 +37,7 @@ void setUpPageTable(support_t *uproc) {
 void SST_entry_point() {
   // obtain the asid
   support_t *proc_sup = getSupStruct();
-  int procNumber = proc_sup->sup_asid;
+  int i = proc_sup->sup_asid - 1;
   // initial proc state
   state_t uproc_state;
   uproc_state.reg_sp = USERSTACKTOP;
@@ -46,7 +46,7 @@ void SST_entry_point() {
   uproc_state.status = MSTATUS_MPIE_MASK;
   uproc_state.mie = MIE_ALL;
   // set entry hi asid to i
-  uproc_state.entry_hi = procNumber << ASIDSHIFT;
+  uproc_state.entry_hi = (i + 1) << ASIDSHIFT;
 
   // initialize uproc support struct
   memaddr ramtop;
@@ -55,18 +55,18 @@ void SST_entry_point() {
   proc_sup->sup_exceptContext[0] =
       (context_t){.pc = (memaddr)TLB_ExceptionHandler,
                   .status = STATUS_INTERRUPT_ON_NEXT,
-                  .stackPtr = PENULTIMATE_RAM_FRAME - procNumber * PAGESIZE};
+                  .stackPtr = PENULTIMATE_RAM_FRAME - i * PAGESIZE};
 
   proc_sup->sup_exceptContext[1] = (context_t){
       .pc = (memaddr)generalExceptionHandler,
       .status = STATUS_INTERRUPT_ON_NEXT,
-      .stackPtr = PENULTIMATE_RAM_FRAME - procNumber * PAGESIZE + HALFPAGESIZE};
+      .stackPtr = PENULTIMATE_RAM_FRAME - i * PAGESIZE + HALFPAGESIZE};
   // initialize pgTbl
   setUpPageTable(proc_sup);
 
-  uprocs[procNumber] = create_process(&uproc_state, proc_sup);
+  uprocs[i] = create_process(&uproc_state, proc_sup);
 
-  SST_service(procNumber);
+  SST_service(i);
 }
 
 void SSTRequest(pcb_t *sender, int service, void *arg);
@@ -99,6 +99,7 @@ void terminateSST() {
   };
   SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb,
           (unsigned int)(&term_process_payload), 0);
+  SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, 0, 0);
 }
 
 void writeOnPrinter(pcb_t *sender, void *arg) {
