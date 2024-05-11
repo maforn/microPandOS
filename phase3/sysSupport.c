@@ -38,7 +38,7 @@ void generalExceptionHandler() {
     SYSCALLExceptionHandler(support_struct);
 
     // load back the process state after the exception is handled
-    LDST(&exceptionState);
+    LDST(exceptionState);
 
   } else {
     // call the trap exception handler
@@ -71,10 +71,8 @@ void SYSCALLExceptionHandler(support_t *support_struct) {
     if (sender == PARENT)
       sender = current_process->p_parent;
 
-    unsigned int *payload = (unsigned int *)proc_state->reg_a2;
-
     // syscall to receive the message
-    SYSCALL(RECEIVEMESSAGE, (unsigned int)sender, (unsigned int)payload, 0);
+    SYSCALL(RECEIVEMESSAGE, (unsigned int)sender, (unsigned int)proc_state->reg_a2, 0);
   }
 
   // set the result of the syscall

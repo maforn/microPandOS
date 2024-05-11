@@ -11,7 +11,7 @@ typedef unsigned int devregtr;
 
 extern pcb_t *ssi_pcb;
 
-static pcb_t *uproc;
+static pcb_t *uprocs[UPROCMAX];
 
 void SST_service();
 
@@ -37,7 +37,7 @@ void setUpPageTable(support_t *uproc) {
 void SST_entry_point() {
   // obtain the asid
   support_t *proc_sup = getSupStruct();
-  int procNumber = proc_sup->sup_asid;
+  int i = proc_sup->sup_asid - 1;
   // initial proc state
   state_t uproc_state;
   uproc_state.reg_sp = USERSTACKTOP;
@@ -46,7 +46,7 @@ void SST_entry_point() {
   uproc_state.status = MSTATUS_MPIE_MASK;
   uproc_state.mie = MIE_ALL;
   // set entry hi asid to i
-  uproc_state.entry_hi = procNumber << ASIDSHIFT;
+  uproc_state.entry_hi = (i + 1) << ASIDSHIFT;
 
   // initialize uproc support struct
   memaddr ramtop;
@@ -55,26 +55,26 @@ void SST_entry_point() {
   proc_sup->sup_exceptContext[0] =
       (context_t){.pc = (memaddr)TLB_ExceptionHandler,
                   .status = STATUS_INTERRUPT_ON_NEXT,
-                  .stackPtr = PENULTIMATE_RAM_FRAME - procNumber * PAGESIZE};
+                  .stackPtr = PENULTIMATE_RAM_FRAME - i * PAGESIZE};
 
   proc_sup->sup_exceptContext[1] = (context_t){
       .pc = (memaddr)generalExceptionHandler,
       .status = STATUS_INTERRUPT_ON_NEXT,
-      .stackPtr = PENULTIMATE_RAM_FRAME - procNumber * PAGESIZE + HALFPAGESIZE};
+      .stackPtr = PENULTIMATE_RAM_FRAME - i * PAGESIZE + HALFPAGESIZE};
   // initialize pgTbl
   setUpPageTable(proc_sup);
 
-  uproc = create_process(&uproc_state, proc_sup);
+  uprocs[i] = create_process(&uproc_state, proc_sup);
 
-  SST_service();
+  SST_service(i);
 }
 
 void SSTRequest(pcb_t *sender, int service, void *arg);
 
-void SST_service() {
+void SST_service(int i) {
   while (1) {
     ssi_payload_t *payload;
-    pcb_t *sender = (pcb_t *)SYSCALL(RECEIVEMESSAGE, (unsigned int)uproc,
+    pcb_t *sender = (pcb_t *)SYSCALL(RECEIVEMESSAGE, (unsigned int)uprocs[i],
                                      (unsigned int)&payload, 0);
     SSTRequest(sender, payload->service_code, payload->arg);
   }
@@ -83,7 +83,7 @@ void SST_service() {
 extern pcb_t *initiator_pcb;
 
 void getTOD(pcb_t *sender) {
-  long unsigned int tod;
+  unsigned int tod;
   STCK(tod);
   SYSCALL(SENDMESSAGE, (unsigned int)sender, tod, 0);
 }
@@ -99,12 +99,14 @@ void terminateSST() {
   };
   SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb,
           (unsigned int)(&term_process_payload), 0);
+  SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, 0, 0);
 }
 
 void writeOnPrinter(pcb_t *sender, void *arg) {
 	unsigned short controller_number = sender->p_supportStruct->sup_asid - 1;
 	devreg_t *controller = (devreg_t *) DEV_REG_ADDR(IL_PRINTER, controller_number);
-	char *string = arg;	
+	sst_print_t *print_payload = arg;
+  char *string = print_payload->string;
 	devregtr status;
 
 	while (*string != EOS) {
@@ -123,7 +125,7 @@ void writeOnPrinter(pcb_t *sender, void *arg) {
 		// TODO: check if the commented status checking would be correct
 		// DEV_READY would be defined as 1
 		/*if (status != DEV_READY) 
-			PANIC();
+			generalExceptionHandler();
 		*/
 
 		string++;
@@ -136,7 +138,9 @@ void writeOnPrinter(pcb_t *sender, void *arg) {
 void writeOnTerminal(pcb_t *sender, void *arg) {
   unsigned short controller_number = sender->p_supportStruct->sup_asid - 1;
   devreg_t *controller =(devreg_t *)DEV_REG_ADDR(IL_TERMINAL, controller_number);
-  char *string = arg;
+  sst_print_t *print_payload = arg;
+  char *string = print_payload->string;
+
   devregtr status;
 
   while (*string != EOS) {
@@ -153,7 +157,7 @@ void writeOnTerminal(pcb_t *sender, void *arg) {
 
     if ((status & TERMSTATMASK) != RECVD)
       // TODO: PANIC? or generalExceptionHandler?
-      PANIC();
+      generalExceptionHandler();
 
     string++;
   }
