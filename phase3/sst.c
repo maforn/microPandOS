@@ -11,7 +11,7 @@ typedef unsigned int devregtr;
 
 extern pcb_t *ssi_pcb;
 
-static pcb_t *uproc;
+static pcb_t *uprocs[UPROCMAX];
 
 void SST_service();
 
@@ -64,17 +64,17 @@ void SST_entry_point() {
   // initialize pgTbl
   setUpPageTable(proc_sup);
 
-  uproc = create_process(&uproc_state, proc_sup);
+  uprocs[procNumber] = create_process(&uproc_state, proc_sup);
 
-  SST_service();
+  SST_service(procNumber);
 }
 
 void SSTRequest(pcb_t *sender, int service, void *arg);
 
-void SST_service() {
+void SST_service(int i) {
   while (1) {
     ssi_payload_t *payload;
-    pcb_t *sender = (pcb_t *)SYSCALL(RECEIVEMESSAGE, (unsigned int)uproc,
+    pcb_t *sender = (pcb_t *)SYSCALL(RECEIVEMESSAGE, (unsigned int)uprocs[i],
                                      (unsigned int)&payload, 0);
     SSTRequest(sender, payload->service_code, payload->arg);
   }
@@ -83,7 +83,7 @@ void SST_service() {
 extern pcb_t *initiator_pcb;
 
 void getTOD(pcb_t *sender) {
-  long unsigned int tod;
+  unsigned int tod;
   STCK(tod);
   SYSCALL(SENDMESSAGE, (unsigned int)sender, tod, 0);
 }
@@ -104,7 +104,8 @@ void terminateSST() {
 void writeOnPrinter(pcb_t *sender, void *arg) {
 	unsigned short controller_number = sender->p_supportStruct->sup_asid - 1;
 	devreg_t *controller = (devreg_t *) DEV_REG_ADDR(IL_PRINTER, controller_number);
-	char *string = arg;	
+	sst_print_t *print_payload = arg;
+  char *string = print_payload->string;
 	devregtr status;
 
 	while (*string != EOS) {
@@ -123,7 +124,7 @@ void writeOnPrinter(pcb_t *sender, void *arg) {
 		// TODO: check if the commented status checking would be correct
 		// DEV_READY would be defined as 1
 		/*if (status != DEV_READY) 
-			PANIC();
+			generalExceptionHandler();
 		*/
 
 		string++;
@@ -136,7 +137,9 @@ void writeOnPrinter(pcb_t *sender, void *arg) {
 void writeOnTerminal(pcb_t *sender, void *arg) {
   unsigned short controller_number = sender->p_supportStruct->sup_asid - 1;
   devreg_t *controller =(devreg_t *)DEV_REG_ADDR(IL_TERMINAL, controller_number);
-  char *string = arg;
+  sst_print_t *print_payload = arg;
+  char *string = print_payload->string;
+
   devregtr status;
 
   while (*string != EOS) {

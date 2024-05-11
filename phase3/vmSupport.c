@@ -97,11 +97,9 @@ void TLB_ExceptionHandler() {
   SYSCALL(RECEIVEMESSAGE, (unsigned int)swap_mutex_pcb, 0, 0);
 
   // (5) determine missing page number
-  int e = proc_state.entry_hi & GETPAGENO;
-  int p = 0;
-  while (p < USERPGTBLSIZE && ((sup_struct->sup_privatePgTbl[p].pte_entryHI & GETPAGENO) != e)) {
-    p++;
-  }
+  int p = (proc_state.entry_hi & GETPAGENO) >> VPNSHIFT;
+  if (p > 31)
+    p = 31;
 
   // (6) pick a frame from swap pool
   int i = pickSwapFrame();
