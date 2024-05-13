@@ -98,8 +98,8 @@ void TLB_ExceptionHandler() {
 
   // (5) determine missing page number
   int p = (proc_state.entry_hi & GETPAGENO) >> VPNSHIFT;
-  if (p > 31)
-    p = 31;
+  if (p > USERPGTBLSIZE)
+    p = USERPGTBLSIZE - 1;
 
   // (6) pick a frame from swap pool
   int i = pickSwapFrame();

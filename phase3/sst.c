@@ -21,12 +21,12 @@ void setUpPageTable(support_t *uproc) {
     uproc->sup_privatePgTbl[i].pte_entryHI =
         (0x80000000 + i * PAGESIZE) +
         (uproc->sup_asid << ASIDSHIFT);
-    uproc->sup_privatePgTbl[i].pte_entryLO = DIRTYON | GLOBALON;
+    uproc->sup_privatePgTbl[i].pte_entryLO = DIRTYON;
   }
   // set the last VPN to 0xBFFFF000
   uproc->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryHI =
       (USERSTACKTOP - PAGESIZE) + (uproc->sup_asid << ASIDSHIFT);
-  uproc->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryLO = DIRTYON | GLOBALON;
+  uproc->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryLO = DIRTYON;
 }
 
 /*
