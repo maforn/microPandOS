@@ -12,6 +12,7 @@ typedef unsigned int devregtr;
 extern pcb_t *ssi_pcb;
 
 static pcb_t *uprocs[UPROCMAX];
+state_t uproc_state[UPROCMAX];
 
 void SST_service();
 
@@ -39,14 +40,13 @@ void SST_entry_point() {
   support_t *proc_sup = getSupStruct();
   int i = proc_sup->sup_asid - 1;
   // initial proc state
-  state_t uproc_state;
-  uproc_state.reg_sp = USERSTACKTOP;
-  uproc_state.pc_epc = UPROCSTARTADDR;
+  uproc_state[i].reg_sp = USERSTACKTOP;
+  uproc_state[i].pc_epc = UPROCSTARTADDR;
   // set all interrupts on and user mode (its mask is 0x0)
-  uproc_state.status = MSTATUS_MPIE_MASK;
-  uproc_state.mie = MIE_ALL;
+  uproc_state[i].status = MSTATUS_MPIE_MASK;
+  uproc_state[i].mie = MIE_ALL;
   // set entry hi asid to i
-  uproc_state.entry_hi = (i + 1) << ASIDSHIFT;
+  uproc_state[i].entry_hi = (i + 1) << ASIDSHIFT;
 
   // initialize uproc support struct
   memaddr ramtop;
@@ -64,7 +64,7 @@ void SST_entry_point() {
   // initialize pgTbl
   setUpPageTable(proc_sup);
 
-  uprocs[i] = create_process(&uproc_state, proc_sup);
+  uprocs[i] = create_process(&uproc_state[i], proc_sup);
 
   SST_service(i);
 }

@@ -57,6 +57,7 @@ void InitiatorProcess() {
   mutex_state.status = STATUS_INTERRUPT_ON_NEXT;
   mutex_state.mie = MIE_ALL;
   swap_mutex_pcb = create_process(&mutex_state, NULL);
+  unsigned int last_stack = mutex_state.reg_sp; 
 
   // TODO: non ha molto senso quello che segue: Each (potentially) sharable
   // peripheral I/O device can have a process for it. These process will be used
@@ -64,13 +65,16 @@ void InitiatorProcess() {
   // request the correct DoIO service to the SSI (this feature is optional and
   // can be delegated directly to the SST processes to simplify the project).
 
+  TLBWR();
+  TLBCLR();
   // create the 8 SST for the Uprocs
   for (int i = 0; i < 1; i++) {
     STST(&sst_state[i]);
-    sst_state[i].reg_sp = sst_state[i].reg_sp - PAGESIZE / 4;
+    sst_state[i].reg_sp = last_stack - PAGESIZE / 2;
     sst_state[i].pc_epc = (memaddr)SST_entry_point;
     sst_state[i].status = STATUS_INTERRUPT_ON_NEXT;
     sst_state[i].mie = MIE_ALL;
+    last_stack = sst_state[i].reg_sp;
     // SST shares the same support struct of its uproc
     uproc_sup_array[i].sup_asid = i + 1;
 
