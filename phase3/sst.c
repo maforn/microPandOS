@@ -65,7 +65,7 @@ void SST_entry_point() {
   setUpPageTable(proc_sup);
 
   uprocs[i] = create_process(&uproc_state[i], proc_sup);
-
+  
   SST_service(i);
 }
 
