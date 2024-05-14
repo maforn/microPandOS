@@ -17,8 +17,8 @@ void uTLB_RefillHandler() {
   state_t *proc_state = (state_t *)BIOSDATAPAGE;
   // get page number
   int p = (proc_state->entry_hi & GETPAGENO) >> VPNSHIFT;
-  if (p > 31)
-    p = 31;
+  if (p > USERPGTBLSIZE)
+    p = USERPGTBLSIZE - 1;
   // set the new entry HI end LO, write to the TLB and Load back the process
   setENTRYHI(getPteEntry(current_process, p).pte_entryHI);
   setENTRYLO(getPteEntry(current_process, p).pte_entryLO);
