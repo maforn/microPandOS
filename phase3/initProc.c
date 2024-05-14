@@ -68,7 +68,7 @@ void InitiatorProcess() {
   TLBWR();
   TLBCLR();
   // create the 8 SST for the Uprocs
-  for (int i = 0; i < 1; i++) {
+  for (int i = 0; i < 4; i++) {
     STST(&sst_state[i]);
     sst_state[i].reg_sp = last_stack - PAGESIZE / 2;
     sst_state[i].pc_epc = (memaddr)SST_entry_point;
@@ -83,7 +83,7 @@ void InitiatorProcess() {
   }
 
   //  Wait for 8 messages, that should be send when each SST is terminated.
-  for (int i = 0; i < 1; i++) {
+  for (int i = 0; i < 4; i++) {
     SYSCALL(RECEIVEMESSAGE, (unsigned int)sst_pcbs[i], 0, 0);
   }
 

@@ -143,7 +143,7 @@ void writeOnTerminal(pcb_t *sender, void *arg) {
 
   devregtr status;
 
-  while (*string != EOS) {
+  for (int i = 0; i < print_payload->length; i++) {
     ssi_do_io_t do_io = {
       .commandAddr = &controller->term.transm_command,
       .commandValue = PRINTCHR | (((devregtr)*string) << 8),
