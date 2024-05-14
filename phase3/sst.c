@@ -145,12 +145,12 @@ void writeOnTerminal(pcb_t *sender, void *arg) {
 
   while (*string != EOS) {
     ssi_do_io_t do_io = {
-        .commandAddr = &controller->term.transm_command,
-        .commandValue = PRINTCHR | (((devregtr)*string) << 8),
+      .commandAddr = &controller->term.transm_command,
+      .commandValue = PRINTCHR | (((devregtr)*string) << 8),
     };
     ssi_payload_t payload = {
-        .service_code = DOIO,
-        .arg = &do_io,
+      .service_code = DOIO,
+      .arg = &do_io,
     };
     SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&payload), 0);
     SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&status), 0);

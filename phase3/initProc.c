@@ -74,6 +74,7 @@ void InitiatorProcess() {
     sst_state[i].pc_epc = (memaddr)SST_entry_point;
     sst_state[i].status = STATUS_INTERRUPT_ON_NEXT;
     sst_state[i].mie = MIE_ALL;
+    sst_state[i].entry_hi = (i + 1) << ASIDSHIFT;
     last_stack = sst_state[i].reg_sp;
     // SST shares the same support struct of its uproc
     uproc_sup_array[i].sup_asid = i + 1;
