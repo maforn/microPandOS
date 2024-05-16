@@ -52,7 +52,7 @@ void InitiatorProcess() {
   initSwapStructs();
   // initialize the state for the mutex pcb
   STST(&mutex_state);
-  mutex_state.reg_sp = mutex_state.reg_sp - PAGESIZE / 4;
+  mutex_state.reg_sp = mutex_state.reg_sp - QPAGE;
   mutex_state.pc_epc = (memaddr)swap_mutex;
   mutex_state.status = STATUS_INTERRUPT_ON_NEXT;
   mutex_state.mie = MIE_ALL;
@@ -65,12 +65,13 @@ void InitiatorProcess() {
   // request the correct DoIO service to the SSI (this feature is optional and
   // can be delegated directly to the SST processes to simplify the project).
 
+  // clear the first random entry for the tlb
   TLBWR();
   TLBCLR();
   // create the 8 SST for the Uprocs
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < UPROCMAX; i++) {
     STST(&sst_state[i]);
-    sst_state[i].reg_sp = last_stack - PAGESIZE / 2;
+    sst_state[i].reg_sp = last_stack - QPAGE;
     sst_state[i].pc_epc = (memaddr)SST_entry_point;
     sst_state[i].status = STATUS_INTERRUPT_ON_NEXT;
     sst_state[i].mie = MIE_ALL;
