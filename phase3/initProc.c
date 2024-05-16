@@ -84,7 +84,7 @@ void InitiatorProcess() {
   }
 
   //  Wait for 8 messages, that should be send when each SST is terminated.
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < UPROCMAX; i++) {
     SYSCALL(RECEIVEMESSAGE, (unsigned int)sst_pcbs[i], 0, 0);
   }
 
