@@ -5,6 +5,7 @@
 
 #define SWAPSTARTADDR (RAMSTART + 32 * PAGESIZE)
 #define FREEFRAME -1
+#define INDEX_MASK 0x80000000
 #define PFNSHIFT 12
 #define TLBMOD 24
 

@@ -22,21 +22,23 @@ static inline unsigned int getFrameAddr(int frame_index) {
 
 void update_TLB(pteEntry_t pte) {
   // TODO: switch to better approach
+  /*
   TLBCLR();
   setENTRYHI(pte.pte_entryHI);
   setENTRYLO(pte.pte_entryLO);
   TLBWR();
+  */
 
-  /* better approach
+  // better approach
   setENTRYHI(pte.pte_entryHI);
   setENTRYLO(pte.pte_entryLO);
+
   TLBP(); // probe TLB
 
-  if(getINDEX() == 0)
-          TLBWI(); // if a match is found, rewrite it
+  if((getINDEX() & INDEX_MASK) == 0)
+    TLBWI(); // if a match is found, rewrite it
   else
-          TLBWR(); // otherwise, add new entry
-  */
+    TLBWR(); // otherwise, add new entry
 }
 
 unsigned int readWriteFlash(int operation, int page, int frame, int devnum) {
