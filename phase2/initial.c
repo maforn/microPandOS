@@ -83,7 +83,7 @@ int main() {
   second_process->p_s.mie = MIE_ALL;
   second_process->p_s.status = STATUS_INTERRUPT_ON_NEXT;
   // FRAMESIZE should be ram's frames -> const PAGESIZE (4kB)
-  second_process->p_s.reg_sp = ramtop - (2 * PAGESIZE);
+  second_process->p_s.reg_sp = ramtop - ((UPROCMAX + 2) * PAGESIZE);
 
   second_process->p_s.pc_epc = (memaddr)InitiatorProcess;
 
