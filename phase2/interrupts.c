@@ -56,7 +56,7 @@ void handleIntervalTimer() {
 void handleLocalTimer() {
     if (current_process != NULL) {
         // update current process status
-    	memcpy(&current_process->p_s, (state_t *)BIOSDATAPAGE, sizeof(state_t));
+    	current_process->p_s = *(state_t *)BIOSDATAPAGE;
 
     	// add time passed to the process that has finished its timeslice
     	current_process->p_time += TIMESLICE;
@@ -68,6 +68,9 @@ void handleLocalTimer() {
     // call schedule to pass control to first process in ready queue
     schedule();
 }
+
+static ssi_unblock_do_io_t ssi_unblock_process[DEVINTNUM][DEVPERINT];
+static ssi_payload_t payloads[DEVINTNUM][DEVPERINT];
 
 /**
  * This function is called by the exceptionHandler to handle a Device interrupt: it will check the
@@ -112,22 +115,19 @@ void handleDeviceInterrupt(unsigned short device_number) {
     // if the program that has requested the IO operation is still alive, send a message to the SSI to unlock it
     if (!emptyProcQ(&blocked_pcbs[device_number][controller_number])) {
         // save the relevant parameters as a payload
-        static ssi_unblock_do_io_t ssi_unblock_process;
-        ssi_unblock_process.status = status & STATUS_MASK;
-        ssi_unblock_process.device = device_number;
-        ssi_unblock_process.controller = controller_number;
+        ssi_unblock_process[device_number][controller_number].status = status & STATUS_MASK;
+        ssi_unblock_process[device_number][controller_number].device = device_number;
+        ssi_unblock_process[device_number][controller_number].controller = controller_number;
 
         // build the ssi payload
-        static ssi_payload_t payload = {
-            .service_code = UNBLOCKPROCESSDEVICE,
-            .arg = &ssi_unblock_process,
-        };
+        payloads[device_number][controller_number].service_code = UNBLOCKPROCESSDEVICE;
+        payloads[device_number][controller_number].arg = &ssi_unblock_process[device_number][controller_number];
 
         // create a custom state for a fake sendMessage
         state_t custom_state;
         custom_state.reg_a0 = SENDMESSAGE;
         custom_state.reg_a1 = (unsigned int)ssi_pcb;
-        custom_state.reg_a2 = (unsigned int)&payload;
+        custom_state.reg_a2 = (unsigned int)&payloads[device_number][controller_number];
 
         // manually send the message as we cannot use SYSCALL inside an exception
         sendMessage(&custom_state);

@@ -28,11 +28,12 @@ kernel.core.uriscv : kernel
 
 # kernel : ./phase1/msg.o ./phase1/pcb.o ./phase2/p2test.o ./phase2/exceptions.o ./phase2/initial.o  crtso.o liburiscv.o
 #kernel : ./phase1/msg.o ./phase1/pcb.o ./phase2/initial.o ./phase2/ssi.o ./phase2/exceptions.o ./phase2/scheduler.o ./phase2/interrupts.o ./phase2/utils.o crtso.o liburiscv.o
-kernel : ./phase1/msg.o ./phase1/pcb.o ./phase2/initial.o ./phase2/ssi.o ./phase2/exceptions.o ./phase2/scheduler.o ./phase2/interrupts.o ./phase2/utils.o ./phase2/p2test.o crtso.o liburiscv.o
+#kernel : ./phase1/msg.o ./phase1/pcb.o ./phase2/initial.o ./phase2/ssi.o ./phase2/exceptions.o ./phase2/scheduler.o ./phase2/interrupts.o ./phase2/utils.o ./phase2/p2test.o crtso.o liburiscv.o
+kernel : ./phase1/msg.o ./phase1/pcb.o ./phase2/initial.o ./phase2/ssi.o ./phase2/exceptions.o ./phase2/scheduler.o ./phase2/interrupts.o ./phase2/utils.o ./phase3/initProc.o ./phase3/vmSupport.o ./phase3/sysSupport.o ./phase3/sst.o crtso.o liburiscv.o
 	$(LD) -o $@ $^ $(LDFLAGS)
 
 clean :
-	-rm -f *.o ./phase1/*.o ./phase2/*.o kernel kernel.*.uriscv
+	-rm -f *.o ./phase1/*.o ./phase2/*.o ./phase3/*.o kernel kernel.*.uriscv ./*uriscv
 
 # Pattern rule for assembly modules
 %.o : %.S

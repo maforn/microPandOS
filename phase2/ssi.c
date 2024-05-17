@@ -28,9 +28,9 @@ unsigned int createProcess(pcb_t * sender, ssi_create_process_t *arg) {
 	pcb_t *new_pcb = allocPcb();
 	if (new_pcb == NULL) // no new proc allocable
 		return NOPROC;
-	
+
 	// initialize the new pcb's fields to the values specified by arg
-	memcpy(&(new_pcb->p_s), arg->state, sizeof(state_t));
+	new_pcb->p_s = *arg->state;
 	if (arg->support == NULL)
 		new_pcb->p_supportStruct = NULL;
 	else
@@ -54,13 +54,14 @@ void terminateProcess(pcb_t *proc) {
 		pcb_t* removedChild = container_of(proc->p_child.next, pcb_t, p_sib);
 		terminateProcess(removedChild);
 	}
-	
+
 	// decrease the process count and remove the specified process: if it is not the current process or in
-	// the ready queue then it's in a blocking queue. In this case decrease the soft block count as well 
+	// the ready queue or in the message queue then it's in a blocking queue. In this case decrease the 
+	// soft block count as well 
 	process_count--;
 	if (current_process == proc)
 		current_process = NULL;
-	else if (outProcQ(&ready_queue, proc) == NULL) {
+	else if (outProcQ(&ready_queue, proc) == NULL && outProcQ(&waiting_MSG, proc) == NULL) {
 		soft_block_count--;
 		// delete it from whichever queue it's in
 		list_del(&proc->p_list);
@@ -76,6 +77,10 @@ void terminateProcess(pcb_t *proc) {
 */
 static inline void removeFromMessageQueue(pcb_t *process) {
 	outProcQ(&waiting_MSG, process);
+	if (outProcQ(&ready_queue, process) != NULL)
+		process->blocked = 2;
+	else
+		process->blocked = 1;
 }
 
 /**
@@ -85,13 +90,13 @@ static inline void removeFromMessageQueue(pcb_t *process) {
 void doIO(pcb_t *sender, ssi_do_io_t *do_io) {
 	// remove the process from the waiting message queue: a pcb can stay in only one queue at a time
 	removeFromMessageQueue(sender);
+	soft_block_count++;
 
 	// block the pcb: get the device and controller from the address
 	unsigned short device_number = ((unsigned int)do_io->commandAddr - START_DEVREG) / (DEVPERINT  * DEVREGSIZE);
 	unsigned short controller_number = (((unsigned int)do_io->commandAddr - START_DEVREG) / DEVREGSIZE) % DEVPERINT;
 	
 	// block the process and insert its pcb in the appropriate waiting list
-	sender->blocked = 1;
 	insertProcQ(&blocked_pcbs[device_number][controller_number], sender);
 
 	// write command value on the device address specified as the command address
@@ -106,7 +111,12 @@ void doIO(pcb_t *sender, ssi_do_io_t *do_io) {
 */
 static inline void unblockProcessFromDevice(ssi_unblock_do_io_t *do_io) {
 	pcb_t *proc = removeProcQ(&blocked_pcbs[do_io->device][do_io->controller]);
-	insertProcQ(&waiting_MSG, proc);
+	if (proc->blocked == 2) {
+		proc->blocked = 0;
+		insertProcQ(&ready_queue, proc);
+	} else
+		insertProcQ(&waiting_MSG, proc);
+	soft_block_count--;
 	SYSCALL(SENDMESSAGE, (unsigned int)proc, (unsigned int)do_io->status, 0);
 }
 
@@ -119,15 +129,20 @@ static inline void unblockProcessFromTimer() {
 	// while there are still processes in the waiting queue, unlock them
 	while ( !emptyProcQ( &waiting_IT ) ) {
 		pcb_t* process = removeProcQ(&waiting_IT);
-		insertProcQ(&waiting_MSG, process);
+		if (process->blocked == 2) {
+			process->blocked = 0;
+			insertProcQ(&ready_queue, process);
+		}	else
+			insertProcQ(&waiting_MSG, process);
+		soft_block_count--;
 		SYSCALL(SENDMESSAGE, (unsigned int)process, 0, 0);
 	}
 }
 
 /**
  * This function will send a message to the sender with the time it has used as the active process.
- * The field p_time is updated every time a process is stopped, be it because of a receiveMessage or 
- * because of a PLT swap 
+ * The field p_time is updated every time a process is stopped, be it because of a receiveMessage or
+ * because of a PLT swap
 */
 static inline void getCPUTime(pcb_t* sender){
 	SYSCALL(SENDMESSAGE, (unsigned int)sender, (unsigned int)sender->p_time, 0);
@@ -139,7 +154,7 @@ static inline void getCPUTime(pcb_t* sender){
 */
 static inline void waitForClock(pcb_t* sender){
 	removeFromMessageQueue(sender);
-	sender->blocked = 1;
+	soft_block_count++;
 	insertProcQ(&waiting_IT, sender);
 }
 

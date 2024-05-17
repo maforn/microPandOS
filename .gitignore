@@ -57,3 +57,4 @@ dkms.conf
 kernel
 kernel*
 term0.uriscv
+*.uriscv
