@@ -22,6 +22,7 @@ In this phase we developed the true kernel of the OS: we added the initial booti
 ### The Initial Booting
 In the [initial](/phase2/initial.c) file we declare and set up all the required structures and global variables, such as the ready queue, the number of existing processes, and so on. We then set up the global interval timer, the SSI as the first process, and the initiator process that will initialize all the swap mutex processes and all the SSTs. Finally, we call the scheduler.
 
+
 ---
 ### The Scheduler
 Our [scheduler](/phase2/scheduler.c) when called will check some special conditions (if there is a deadlock, if it should wait for an interrupt, and if it has finished all the tests), and then it will set a round robin, and load the next process in the ready queue.  
@@ -30,6 +31,7 @@ The policy we use for scheduling is to use a round robin that will be called eve
 ---
 ### The Exception Handler
 When an [exception](/phase2/exceptions.c) is raised, the current process state will be stored on the BIOSDATAPAGE address and the function `exceptionHandler` will be called. Based on the type of exception, different functions may be called. If the exception is a trap, an illegal syscall, or a TLB exception, the process will be killed (if it does not have a support struct) or the exception will be passed up with a vector to the Support Level (phase 3).  
+
 
 #### Pass Up or Die
 The pass-up handler will either check if the process has a valid support struct, if it does not it will kill the process (die), while if it does it will pass up the exception to the handler specified in the support struct exceptContext to Phase 3
@@ -122,7 +124,6 @@ When the OS is booted, the Kernel will grow its tack from 0x2000.1000 downwards,
 
 #### Edited the `pcb_t` structure
 We have added a new field to the original structure of `pcb_t`, as we deemed it necessary to have an additional `blocked` field to check if the process was already in a queue of blocked pcbs, not yet blocked, or in the ready queue. This is necessary because each process can be waiting for both a message and the Interval Timer or a Device IO. As each process `p_list` cannot be in two queues at the same time, we manage the insertion in each queue with this field.  
-  
 Let's take as a case study the doIO operation. The process sends a request to the SSI and then does a syscall to receive the SSI's answer. If the local timer sends an interrupt before the process calls the receive, the control will eventually pass to the ssi, whose `doIO` will insert the process' pcb in the list for the PCBs waiting for the device and it will set `blocked` to 1. The control will eventually then come back to the original process that will call and receive a message: at this point, the process is already blocked, so it will not be put on the waiting msg list. If the local timer does not fire before the blocking syscall, then the process will be put in the waiting msg list, and `blocked` will be set to 1. Then the scheduler will be called and the SSI's `doIO` function will remove the process from the waiting msg list and it will put it in the list waiting for the device.  
 When the device sends the interrupt and it is received, the process of waiting for the interrupt will be removed from the waiting device queue and put in the waiting message queue. The interrupt handler will send a message to the SSI, which will in turn send a message to the process and effectively unlock it.  
 In this way, the PCB was never in two different queues at the same time, just as we needed it.
@@ -141,7 +142,6 @@ When the scheduler needs to wait for the next interrupt, we have to ignore the l
 
 #### Memcpy
 We had to reimplement memcpy in the [utils](/phase2/utils.c) as the compiler substituted the * (dereferencing) with memcpy automatically when handling structures.
-
 
 ## Memory Management:
 μPandOS uses 32-bit addresses, giving rise to a 2<sup>32</sup> byte (4 GB) address space. The 4 GB address space is logically divided into four chunks/spaces as follows:
