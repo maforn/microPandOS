@@ -1,12 +1,20 @@
 # µPandOS
 Implementation of a microkernel operating system on the µRISCV architecture. All the relevant instructions and documentation are in the [Documentation](#Documentation) section.
 
+## Table of contents
+- [Phase 1: The Queues Manager](#phase-1-the-queues-manager)
+- [Phase 2: The Kernel](#phase-2-the-kernel)
+- [Phase 3: The Support Level](#phase-3-the-support-level)
+- [Additional Choices and Details](#additional-choices-and-details)
+- [Memory Management](#memory-management)
+- [Documentation](#Documentation)
+
+
 ## Phase 1: The Queues Manager
 In this phase, we created two queue managers, one for the processes (PCB) and one for the messages (MSG). 
 Each PCB has a `list head p_list`, which is the element that will be used by the kernel to put the process in *a single queue* (e.g. *ready queue* or *waiting msg* queue). Each process also has a parent, siblings, and children. As a `list head` element can only be in a single queue at the same time, only the `list head p_sib` is used in the siblings and children queue: the parent's `p_child` is the same list of the children `p_sib`.
 The processes can communicate with each other using a message-passing paradigm and will receive the messages in the `msg_inbox` queue of messages.  
 
----
 ## Phase 2: The Kernel
 In this phase we developed the true kernel of the OS: we added the initial booting function, the scheduler, the exception handler, and also a System Service Interface (SSI) process that follows the paradigms of a microkernel and allows other processes to interact with some "kernel" functions while not requesting directly the kernel process.
 
@@ -28,13 +36,13 @@ The pass-up handler will either check if the process has a valid support struct,
 
 #### TLB-Refill Handler
 This handler was implemented during Level 4/Phase 3 of the project when we implemented the virtual memory. The TLB-Refill event is essentially a cache-miss event since the TLB is a cache of the most recently executed processes’ Page Table entries. The handler will locate the correct Page Table entry in the Current Process’s Page Table and fill the TLB in with the new entry, then it will load back the process.
-<br/><br/>
+#### SYSCALLS
 If a known syscall is called and the process is in kernel (machine) mode it will execute it. There are two possible syscalls handled by the nucleus: `SENDMESSAGE` and `RECVMESSAGE`.
 #### Send Message
 This function behaves like the asynchronous send of the message-passing paradigm. It may directly unlock a waiting message from the waiting queue if it was waiting for a message or it may put the message in the inbox of the destination process.
 #### Receive Message
 This function behaves like the asynchronous receive of the message-passing paradigm. If there are already messages in the current process inbox, it will pop the first, else it will block the process (if it is not already blocked in another queue) and call the scheduler.  
-<br/><br/>
+#### Interrupts
 If the cause is an [interrupt](/phase2/interrupts.c), it will be handled based on the type.
 #### Interrupts: Interval Timer
 When the system-wide timer finishes its clock, it fires an interrupt that we handle with a function that resets the interval timer to the predetermined value and sends a message to the SSI to unlock all the processes waiting for the IT.
@@ -67,7 +75,6 @@ This function will be called with a message from the exception handler that hand
 #### SSI: Unblock Process From Timer
 This function will be called with a message from the exception handler that handles the Interval Timer. It will remove all the processes from the waiting Interval Timer list, put them in the waiting MSG list, and then send a message to unlock them.
 
----
 ## Phase 3: The Support Level
 In this phase, we created an environment for the user-processes and set up the virtual memory manager. Each user-process has its own System Service Thread that will provide its process with useful services.
 
@@ -105,8 +112,14 @@ Any syscall called in user mode will be intercepted and passed to this function 
 #### The Program Trap Exception Handler
 Any program trap that is not directly handled by the kernel or by the other structures of Phase 3 will cause the process to terminate, thus the handler will send a message to the corresponding SST asking to be terminated.  
 
----
+
 ## Additional Choices And Details
+
+#### Stack Pointers Allocations
+All of the stack pointers of the various pcbs are manually set based on necessity and RAM size (see [Memory Management](#memory-management) for further details). This is the scheme on how RAM is used:  
+![Ram Scheme](/images/ram_scheme.png)  
+When the OS is booted, the Kernel will grow its tack from 0x2000.1000 downwards, but we still have to allocate all the stack pointers of the other processes. The first process (the SSI) will have its stack pointer allocated to RAMTOP. We will leave two pages for it and then allocate 8 pages, an half for each user-process exception context. This is necessary because the normal user-process stack pointer is set the user stack top address 0xC000.0000, but when we have an exception and we load the context we are executing in kernel mode and need a stack area in the RAM for the new variables. As there are two possible context for each uproc and we assign half a page each, we need a total of eight pages. After this area we assign the stack pointer for the Initiator Pcb and from there we create and assign the stack pointer for each of its child processes (mutex and SSTs) giving a `QPAGE` (quarter of a page) each.
+
 #### Edited the `pcb_t` structure
 We have added a new field to the original structure of `pcb_t`, as we deemed it necessary to have an additional `blocked` field to check if the process was already in a queue of blocked pcbs, not yet blocked, or in the ready queue. This is necessary because each process can be waiting for both a message and the Interval Timer or a Device IO. As each process `p_list` cannot be in two queues at the same time, we manage the insertion in each queue with this field.  
   
@@ -129,7 +142,26 @@ When the scheduler needs to wait for the next interrupt, we have to ignore the l
 #### Memcpy
 We had to reimplement memcpy in the [utils](/phase2/utils.c) as the compiler substituted the * (dereferencing) with memcpy automatically when handling structures.
 
----
+
+## Memory Management:
+μPandOS uses 32-bit addresses, giving rise to a 2<sup>32</sup> byte (4 GB) address space. The 4 GB address space is logically divided into four chunks/spaces as follows:
+![Ksegs divison](/images/ksegs.png) 
+
+### Physical Memory
+The actual physical memory in µMPS3 is divided into two components: The BIOS portion and RAM.
+#### BIOS
+The BIOS portion corresponds to kseg0 and can be accessed in kernel mode only.  
+![Bios image](/images/bios.png)  
+#### RAM
+“Installed” RAM starts at 0x2000.0000 and RAMTOP will range from 0x2000.8000 to 0x2020.0000 and it is all stored in kseg1.
+![RAM image](/images/ram.png)
+
+### Virtual Memory
+Mapping a logical address to a physical address (address translation) is performed by the MMU (Memory Management Unit) of each processor’s CP0 co-processor. CP0 contains five control registers (Index, Random, EntryHi, EntryLo, and BadVAddr) in addition to a TLB associative cache to support address translation.
+#### The TLB
+The TLB (Translation Lookaside Buffer) is an associative cache, that can hold between 4–64 TLB entries. Each TLB entry describes the mapping between one ASID/logical page number pairing and a physical frame number/location in RAM.  
+Any access above the TLB Floor Address, which can be set to RAMPTOP, 0x4000.0000 or 0x8000.0000, will undergo an MMU address translation to its corresponding physical address.
+
 
 ## Documentation
 - [𝜇PandOS: Setup Tutorial](/docs/TUTORIAL.md)
