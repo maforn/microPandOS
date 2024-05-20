@@ -10,8 +10,11 @@
 #define TLBMOD 24
 
 extern swap_t swap_table[POOLSIZE]; // swap table
+
 void TLB_ExceptionHandler();
 
 void initSwapStructs();
+
+void freeProcFrames(int asid);
 
 #endif
