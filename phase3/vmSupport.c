@@ -71,11 +71,11 @@ int pickSwapFrame() {
       swap_frame = i;
   }
 
-  // if no free frame was found, pick one based on FIFO policy
+  // if no free frame was found, pick one based on "FIFO" policy
   if(swap_frame == -1)
     swap_frame = frame_index;
   
-  // update frame_index for FIFO replacement
+  // update frame_index for "FIFO" replacement
   if(swap_frame == frame_index)
     frame_index = (frame_index + 1) % POOLSIZE;
   
