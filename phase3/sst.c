@@ -14,8 +14,7 @@ extern pcb_t *ssi_pcb;
 pcb_t *uprocs[UPROCMAX];
 state_t uproc_state[UPROCMAX];
 
-void SST_service();
-
+// support function to setup each process' page table
 void setUpPageTable(support_t *uproc) {
   for (int i = 0; i < USERPGTBLSIZE - 1; i++) {
     uproc->sup_privatePgTbl[i].pte_entryHI =
@@ -28,6 +27,8 @@ void setUpPageTable(support_t *uproc) {
       (USERSTACKTOP - PAGESIZE) + (uproc->sup_asid << ASIDSHIFT);
   uproc->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryLO = DIRTYON;
 }
+
+void SST_service();
 
 /*
  * SST creation
@@ -50,11 +51,12 @@ void SST_entry_point() {
   // initialize uproc support struct
   memaddr ramtop;
   RAMTOP(ramtop);
+  // give the top ram frames as the stack pointers for the exception handlers
   memaddr initial_stack_frame = ramtop - (2 * PAGESIZE);
-  proc_sup->sup_exceptContext[0] =
-      (context_t){.pc = (memaddr)TLB_ExceptionHandler,
-                  .status = STATUS_INTERRUPT_ON_NEXT,
-                  .stackPtr = initial_stack_frame - i * PAGESIZE};
+  proc_sup->sup_exceptContext[0] = (context_t){
+      .pc = (memaddr)TLB_ExceptionHandler,
+      .status = STATUS_INTERRUPT_ON_NEXT,
+      .stackPtr = initial_stack_frame - i * PAGESIZE};
 
   proc_sup->sup_exceptContext[1] = (context_t){
       .pc = (memaddr)generalExceptionHandler,
@@ -65,11 +67,13 @@ void SST_entry_point() {
 
   uprocs[i] = create_process(&uproc_state[i], proc_sup);
 
+  // after creating the uproc start waiting for its messages
   SST_service(i);
 }
 
 void SSTRequest(pcb_t *sender, int service, void *arg, int number);
 
+// main loop to support the uproc
 void SST_service(int i) {
   while (1) {
     ssi_payload_t *payload;
@@ -81,13 +85,14 @@ void SST_service(int i) {
 
 extern pcb_t *initiator_pcb;
 
+// get time passed since the system booted
 void getTOD(pcb_t *sender) {
   unsigned int tod;
   STCK(tod);
   SYSCALL(SENDMESSAGE, (unsigned int)sender, tod, 0);
 }
 
-// Terminate SST and child
+// Terminate SST and its uproc
 void terminateSST() {
   // free the memory frames occupied by corresponding uproc
   support_t *proc_sup = getSupStruct();
@@ -105,63 +110,48 @@ void terminateSST() {
   SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, 0, 0);
 }
 
-void writeOnPrinter(pcb_t *sender, void *arg, unsigned int controller_number) {
-	devreg_t *controller = (devreg_t *) DEV_REG_ADDR(IL_PRINTER, controller_number);
+void writeOnDevice(pcb_t *sender, void *arg, unsigned int controller_number, unsigned int dev_type) {
+  // get the controller based on the dev type
+	devreg_t *controller = (devreg_t *) DEV_REG_ADDR(dev_type, controller_number);
 	sst_print_t *print_payload = arg;
   char *string = print_payload->string;
 	devregtr status;
+  // setup the support variables based on the type of device
+  unsigned int ok_code = DEVREADY, additional_char = 0;
+  memaddr *command_addr = &controller->dtp.command;
+  if (dev_type == IL_TERMINAL) {
+    command_addr = &controller->term.transm_command;
+    ok_code = RECVD;
+  }
 
 	for (int i = 0; i < print_payload->length; i++) {
-		controller->dtp.data0 = (devregtr) *string;
+    if (dev_type == IL_TERMINAL)
+      additional_char = (((devregtr)*string) << 8);
+    else
+		  controller->dtp.data0 = (devregtr) *string;
+    // create the payload
 		ssi_do_io_t do_io = {
-			.commandAddr = &controller->dtp.command,
-			.commandValue = PRINTCHR
+			.commandAddr = command_addr,
+			.commandValue = PRINTCHR | additional_char
 		};
 		ssi_payload_t payload = {
 			.service_code = DOIO,
 			.arg = &do_io
 		};
+    // SSI DOIO
 		SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)&payload, 0);
 		SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)&status, 0);
 	
-		// check if statu sis not an error
-		if ((status & STATMASK) != DEVREADY) 
-			generalExceptionHandler();
+		// check that status is not an error
+		if ((status & STATMASK) != ok_code) 
+			programTrapExceptionHandler();
 		
+    // get the next char
 		string++;
 	}
 
 	// write to the sender that is awaiting an empty response
 	SYSCALL(SENDMESSAGE, (unsigned int)sender, 0, 0);
-}
-
-void writeOnTerminal(pcb_t *sender, void *arg, unsigned int controller_number) {
-  devreg_t *controller =(devreg_t *)DEV_REG_ADDR(IL_TERMINAL, controller_number);
-  sst_print_t *print_payload = arg;
-  char *string = print_payload->string;
-
-  devregtr status;
-
-  for (int i = 0; i < print_payload->length; i++) {
-    ssi_do_io_t do_io = {
-      .commandAddr = &controller->term.transm_command,
-      .commandValue = PRINTCHR | (((devregtr)*string) << 8),
-    };
-    ssi_payload_t payload = {
-      .service_code = DOIO,
-      .arg = &do_io,
-    };
-    SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&payload), 0);
-    SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&status), 0);
-
-    if ((status & STATMASK) != RECVD)
-      generalExceptionHandler();
-
-    string++;
-  }
-
-  // write to the sender that is awaiting an empty response
-  SYSCALL(SENDMESSAGE, (unsigned int)sender, 0, 0);
 }
 
 void SSTRequest(pcb_t *sender, int service, void *arg, int number) {
@@ -173,10 +163,10 @@ void SSTRequest(pcb_t *sender, int service, void *arg, int number) {
     terminateSST();
     break;
   case WRITEPRINTER:
-    writeOnPrinter(sender, arg, number);
+    writeOnDevice(sender, arg, number, IL_PRINTER);
     break;
   case WRITETERMINAL:
-    writeOnTerminal(sender, arg, number);
+    writeOnDevice(sender, arg, number, IL_TERMINAL);
     break;
   }
 }

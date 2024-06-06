@@ -5,8 +5,8 @@
 
 void SYSCALLExceptionHandler(support_t *support_struct);
 void programTrapExceptionHandler();
-pcb_t *getParentID();
 
+// support function used to get a proc's support struct in phase 3
 support_t *getSupStruct() {
   support_t *sup_struct;
   ssi_payload_t getsup_payload = {
@@ -21,6 +21,8 @@ support_t *getSupStruct() {
   return sup_struct;
 }
 
+
+// entry point of the general exception handler
 void generalExceptionHandler() {
 
   // get support struct
@@ -46,6 +48,7 @@ void generalExceptionHandler() {
   }
 }
 
+// handles syscall on user level
 void SYSCALLExceptionHandler(support_t *support_struct) {
   state_t *proc_state = &(support_struct->sup_exceptState[GENERALEXCEPT]);
 
@@ -57,11 +60,8 @@ void SYSCALLExceptionHandler(support_t *support_struct) {
     if (destination == PARENT) 
       destination = current_process->p_parent;
 
-    // get the payload
-    unsigned int payload = proc_state->reg_a2;
-
-    // syscall to send the message
-    SYSCALL(SENDMESSAGE, (unsigned int)destination, payload, 0);
+    // syscall to send the message (reg_a2 is the payload)
+    SYSCALL(SENDMESSAGE, (unsigned int)destination, (unsigned int)proc_state->reg_a2, 0);
 
   } else if (proc_state->reg_a0 == RECEIVEMSG) {
 
@@ -71,43 +71,29 @@ void SYSCALLExceptionHandler(support_t *support_struct) {
     if (sender == PARENT)
       sender = current_process->p_parent;
 
-    // syscall to receive the message
+    // syscall to receive the message (reg_a2 is the payload)
     SYSCALL(RECEIVEMESSAGE, (unsigned int)sender, (unsigned int)proc_state->reg_a2, 0);
   }
 
   // set the result of the syscall
   proc_state->reg_a0 = current_process->p_s.reg_a0;
 
-  // increment the pc
+  // increment the pc, else the process will loop on this syscall
   proc_state->pc_epc += 4;
 }
 
+// all the traps not handled cause a suicide
 void programTrapExceptionHandler() {
-  // send the release mutual exclusin message
+  // send the release mutual exclusion if held message
   SYSCALL(SENDMESSAGE, (unsigned int)swap_mutex_pcb, 1, 0);
 
   ssi_payload_t sst_payload = {
   .service_code = TERMINATE,
   .arg = 0,
   };
-  // send the terminate message to the parent
+  // send the terminate message to the parent (the sst)
   SYSCALL(SENDMESSAGE, (unsigned int)current_process->p_parent, (unsigned int)&sst_payload, 0);
 
-  // BLock the process
+  // block the process
   SYSCALL(RECEIVEMESSAGE, (unsigned int)current_process->p_parent, 0, 0);
-}
-
-pcb_t *getParentID() {
-
-  // send the reques to ssi to get the parent pcb
-  ssi_payload_t get_parent_payload = {
-      .service_code = GETPROCESSID,
-      .arg = (void*)1,
-  };
-  SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&get_parent_payload),0);
-
-  // receive the parent pcb
-  pcb_t *parent;
-  SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&parent), 0);
-  return parent;
 }

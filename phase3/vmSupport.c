@@ -16,6 +16,7 @@ void initSwapStructs() {
     swap_table[i].sw_asid = FREEFRAME;
 }
 
+// get physical frame address
 static inline unsigned int getFrameAddr(int frame_index) {
   return SWAPSTARTADDR + frame_index * PAGESIZE;
 }
@@ -61,7 +62,9 @@ static inline unsigned int writeToFlash(int page, int frame, int devnum) {
   return readWriteFlash(FLASHWRITE, page, frame, devnum);
 }
 
+
 int pickSwapFrame() {
+  // staic var that is conserved
   static int frame_index = 0;
   int swap_frame = -1;
 
@@ -94,7 +97,7 @@ void TLB_ExceptionHandler() {
   // (3) if it's a TLB Mod, pass to trap handler
   if (cause == TLBMOD) {
     // pass to trap hadler
-    generalExceptionHandler();
+    programTrapExceptionHandler();
   }
 
   // (4) gain mutual exclusion
@@ -131,7 +134,7 @@ void TLB_ExceptionHandler() {
 
     if (io_status != 1) {
       // pass to trap handler
-      generalExceptionHandler();
+      programTrapExceptionHandler();
     }
   }
 
@@ -140,7 +143,7 @@ void TLB_ExceptionHandler() {
   // check status for errors
   if (io_status != 1) {
     // pass to trap handler
-    generalExceptionHandler();
+    programTrapExceptionHandler();
   }
 
   // (10) update swap table
@@ -172,7 +175,7 @@ void TLB_ExceptionHandler() {
   LDST(&proc_state);
 }
 
-
+// free al the proc frames by setting them to FREEFRAME (-1)
 void freeProcFrames(int asid){
   for(int i = 0; i < POOLSIZE; i++){
     if(swap_table[i].sw_asid == asid)
