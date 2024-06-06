@@ -1,7 +1,8 @@
 #ifndef SST_H_INCLUDED
 #define SST_H_INCLUDED
 
-#define TERMSTATMASK 0xFF
+#define STATMASK 0xFF
+#define DEVREADY 1
 
 #define HALFPAGESIZE (PAGESIZE / 2)
 

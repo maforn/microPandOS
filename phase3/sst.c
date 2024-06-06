@@ -18,7 +18,6 @@ void SST_service();
 
 void setUpPageTable(support_t *uproc) {
   for (int i = 0; i < USERPGTBLSIZE - 1; i++) {
-    // TODO: check shift
     uproc->sup_privatePgTbl[i].pte_entryHI =
         (0x80000000 + i * PAGESIZE) +
         (uproc->sup_asid << ASIDSHIFT);
@@ -125,12 +124,10 @@ void writeOnPrinter(pcb_t *sender, void *arg, unsigned int controller_number) {
 		SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)&payload, 0);
 		SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)&status, 0);
 	
-		// TODO: check if the commented status checking would be correct
-		// DEV_READY would be defined as 1
-		/*if (status != DEV_READY) 
+		// check if statu sis not an error
+		if ((status & STATMASK) != DEVREADY) 
 			generalExceptionHandler();
-		*/
-
+		
 		string++;
 	}
 
@@ -157,8 +154,7 @@ void writeOnTerminal(pcb_t *sender, void *arg, unsigned int controller_number) {
     SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&payload), 0);
     SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)(&status), 0);
 
-    if ((status & TERMSTATMASK) != RECVD)
-      // TODO: PANIC? or generalExceptionHandler?
+    if ((status & STATMASK) != RECVD)
       generalExceptionHandler();
 
     string++;

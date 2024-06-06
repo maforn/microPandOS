@@ -57,13 +57,7 @@ void InitiatorProcess() {
   mutex_state.status = STATUS_INTERRUPT_ON_NEXT;
   mutex_state.mie = MIE_ALL;
   swap_mutex_pcb = create_process(&mutex_state, NULL);
-  unsigned int last_stack = mutex_state.reg_sp; 
-
-  // TODO: non ha molto senso quello che segue: Each (potentially) sharable
-  // peripheral I/O device can have a process for it. These process will be used
-  // to receive complex requests (i.e. to write of a string to a terminal) and
-  // request the correct DoIO service to the SSI (this feature is optional and
-  // can be delegated directly to the SST processes to simplify the project).
+  unsigned int last_stack = mutex_state.reg_sp;
 
   // clear the first random entry for the tlb
   TLBWR();

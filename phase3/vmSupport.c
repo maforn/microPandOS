@@ -37,7 +37,6 @@ unsigned int readWriteFlash(int operation, int page, int frame, int devnum) {
   controller = (devreg_t *)DEV_REG_ADDR(IL_FLASH, devnum);
   controller->dtp.data0 = getFrameAddr(frame);
 
-  // TODO: andrà bene p?
   ssi_do_io_t do_io = {
       .commandAddr = &controller->dtp.command,
       .commandValue = (page << 8) | operation,
@@ -94,16 +93,17 @@ void TLB_ExceptionHandler() {
 
   // (3) if it's a TLB Mod, pass to trap handler
   if (cause == TLBMOD) {
-    // TODO: check pass to trap hadler
+    // pass to trap hadler
     generalExceptionHandler();
   }
 
-  // (4) TODO: gain mutual exclusion
+  // (4) gain mutual exclusion
   SYSCALL(SENDMESSAGE, (unsigned int)swap_mutex_pcb, 0, 0);
   SYSCALL(RECEIVEMESSAGE, (unsigned int)swap_mutex_pcb, 0, 0);
 
   // (5) determine missing page number
   int p = (proc_state.entry_hi & GETPAGENO) >> VPNSHIFT;
+  // the last possibile page does not follow the pattern: add a custom check
   if (p > USERPGTBLSIZE)
     p = USERPGTBLSIZE - 1;
 
@@ -113,7 +113,7 @@ void TLB_ExceptionHandler() {
   // (7 & 8) determine if frame i is occupied. If so, free the frame by copying
   // the data to the appropriate flash device and updating TLB
   if (swap_table[i].sw_asid != FREEFRAME) {
-    // (TODO: check) disable interrupts to achieve atomicity
+    // disable interrupts to achieve atomicity
     unsigned int status = getSTATUS();
     setSTATUS(status & (~MSTATUS_MIE_MASK));
 
@@ -130,8 +130,8 @@ void TLB_ExceptionHandler() {
     unsigned int io_status = writeToFlash(occupying_page, i, occupying_asid - 1);
 
     if (io_status != 1) {
+      // pass to trap handler
       generalExceptionHandler();
-      // TODO: pass to trap handler
     }
   }
 
@@ -139,8 +139,8 @@ void TLB_ExceptionHandler() {
   unsigned int io_status = readFromFlash(p, i, sup_struct->sup_asid - 1);
   // check status for errors
   if (io_status != 1) {
+    // pass to trap handler
     generalExceptionHandler();
-    // TODO: pass to trap handler
   }
 
   // (10) update swap table
@@ -148,7 +148,7 @@ void TLB_ExceptionHandler() {
   swap_table[i].sw_asid = sup_struct->sup_asid;
   swap_table[i].sw_pte = &sup_struct->sup_privatePgTbl[p];
 
-  // (11 & 12) update process page table and TLB atomically TODO: check
+  // (11 & 12) update process page table and TLB atomically
 
   // disable interrupts to achieve atomicity
   unsigned int status = getSTATUS();
@@ -165,7 +165,7 @@ void TLB_ExceptionHandler() {
   // reenable interrupts
   setSTATUS(status);
 
-  // TODO: (13) release mutual exclusion
+  // (13) release mutual exclusion
   SYSCALL(SENDMESSAGE, (unsigned int)swap_mutex_pcb, 0, 0);
 
   // (14) return control to current process
