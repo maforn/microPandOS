@@ -11,6 +11,7 @@ extern pcb_t *ssi_pcb;
 
 state_t sst_state[UPROCMAX], mutex_state;
 
+// support function to create a process given its state and support struct
 pcb_t *create_process(state_t *s, support_t *sup) {
   pcb_t *p;
   ssi_create_process_t ssi_create_process = {
@@ -28,14 +29,16 @@ pcb_t *create_process(state_t *s, support_t *sup) {
 
 static support_t uproc_sup_array[UPROCMAX];
 
+// function executed by the mutex pcb
 void swap_mutex() {
   pcb_t *p;
   int *i;
   while (1) {
-    // use i to determinate if it is a forced release for mutex message
+    // use i to determinate if it is a forced release for mutex message on process termination
     i = 0;
     // wait for someone to request the mutual exlusion
     p = (pcb_t *)SYSCALL(RECEIVEMESSAGE, ANYMESSAGE, (unsigned int)&i, 0);
+    // if i != 0 then it's a forced release, do not enter in mutex
     if (i == 0) {
       // give the ok to the waiting process
       SYSCALL(SENDMESSAGE, (unsigned int)p, 0, 0);
@@ -45,12 +48,13 @@ void swap_mutex() {
   }
 }
 
+// entry point of the first process initiated after the ssi
 void InitiatorProcess() {
   initiator_pcb = current_process;
 
   // Initialize the Swap Pool
   initSwapStructs();
-  // initialize the state for the mutex pcb
+  // initialize the the mutex pcb
   STST(&mutex_state);
   mutex_state.reg_sp = mutex_state.reg_sp - QPAGE;
   mutex_state.pc_epc = (memaddr)swap_mutex;
@@ -59,10 +63,10 @@ void InitiatorProcess() {
   swap_mutex_pcb = create_process(&mutex_state, NULL);
   unsigned int last_stack = mutex_state.reg_sp;
 
-  // clear the first random entry for the tlb
+  // clear the first random entry for the TLB
   TLBWR();
   TLBCLR();
-  // create the 8 SST for the Uprocs
+  // create the SSTs for the Uprocs
   for (int i = 0; i < UPROCMAX; i++) {
     STST(&sst_state[i]);
     sst_state[i].reg_sp = last_stack - QPAGE;
@@ -77,12 +81,12 @@ void InitiatorProcess() {
     sst_pcbs[i] = create_process(&sst_state[i], &uproc_sup_array[i]);
   }
 
-  //  Wait for 8 messages, that should be send when each SST is terminated.
+  //  Wait for messages, that each SST should send when it is terminated.
   for (int i = 0; i < UPROCMAX; i++) {
     SYSCALL(RECEIVEMESSAGE, (unsigned int)sst_pcbs[i], 0, 0);
   }
 
-  // reduce process count to 1 by itself and its children (the mutex)
+  // reduce process count to 1 by killing itself and its children (the mutex)
   ssi_payload_t term_process_payload = {
       .service_code = TERMPROCESS,
       .arg = (void *)NULL,

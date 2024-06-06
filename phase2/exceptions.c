@@ -13,6 +13,7 @@ static inline pteEntry_t getPteEntry(pcb_t *process, int i) {
   return process->p_supportStruct->sup_privatePgTbl[i];
 }
 
+// function called on a TLB Refill event
 void uTLB_RefillHandler() {
   state_t *proc_state = (state_t *)BIOSDATAPAGE;
   // get page number
@@ -24,6 +25,7 @@ void uTLB_RefillHandler() {
   setENTRYHI(getPteEntry(current_process, p).pte_entryHI);
   setENTRYLO(getPteEntry(current_process, p).pte_entryLO);
   TLBWR();
+  // load back the process
   LDST(proc_state);
 }
 
