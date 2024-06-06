@@ -78,7 +78,7 @@ void SYSCALLExceptionHandler(support_t *support_struct) {
   // set the result of the syscall
   proc_state->reg_a0 = current_process->p_s.reg_a0;
 
-  // increment the pc
+  // increment the pc, else the process will loop on this syscall
   proc_state->pc_epc += 4;
 }
 

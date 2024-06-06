@@ -16,6 +16,7 @@ void initSwapStructs() {
     swap_table[i].sw_asid = FREEFRAME;
 }
 
+// get physical frame address
 static inline unsigned int getFrameAddr(int frame_index) {
   return SWAPSTARTADDR + frame_index * PAGESIZE;
 }
@@ -62,7 +63,7 @@ static inline unsigned int writeToFlash(int page, int frame, int devnum) {
 }
 
 int pickSwapFrame() {
-  static int frame_index = 0;
+  int frame_index = 0;
   int swap_frame = -1;
 
   // check if an unoccupied frame is present
@@ -172,7 +173,7 @@ void TLB_ExceptionHandler() {
   LDST(&proc_state);
 }
 
-
+// free al the proc frames by setting them to FREEFRAME (-1)
 void freeProcFrames(int asid){
   for(int i = 0; i < POOLSIZE; i++){
     if(swap_table[i].sw_asid == asid)

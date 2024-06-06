@@ -63,9 +63,6 @@ void InitiatorProcess() {
   swap_mutex_pcb = create_process(&mutex_state, NULL);
   unsigned int last_stack = mutex_state.reg_sp;
 
-  // clear the first random entry for the TLB
-  TLBWR();
-  TLBCLR();
   // create the SSTs for the Uprocs
   for (int i = 0; i < UPROCMAX; i++) {
     STST(&sst_state[i]);
