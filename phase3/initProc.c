@@ -91,6 +91,4 @@ void InitiatorProcess() {
   SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb,
           (unsigned int)(&term_process_payload), 0);
   SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, 0, 0);
-  // if it gets to this point the process was not correctly killed, PANIC
-  PANIC();
 }

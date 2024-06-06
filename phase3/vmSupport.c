@@ -62,8 +62,10 @@ static inline unsigned int writeToFlash(int page, int frame, int devnum) {
   return readWriteFlash(FLASHWRITE, page, frame, devnum);
 }
 
+
 int pickSwapFrame() {
-  int frame_index = 0;
+  // staic var that is conserved
+  static int frame_index = 0;
   int swap_frame = -1;
 
   // check if an unoccupied frame is present
@@ -95,7 +97,7 @@ void TLB_ExceptionHandler() {
   // (3) if it's a TLB Mod, pass to trap handler
   if (cause == TLBMOD) {
     // pass to trap hadler
-    generalExceptionHandler();
+    programTrapExceptionHandler();
   }
 
   // (4) gain mutual exclusion
@@ -132,7 +134,7 @@ void TLB_ExceptionHandler() {
 
     if (io_status != 1) {
       // pass to trap handler
-      generalExceptionHandler();
+      programTrapExceptionHandler();
     }
   }
 
@@ -141,7 +143,7 @@ void TLB_ExceptionHandler() {
   // check status for errors
   if (io_status != 1) {
     // pass to trap handler
-    generalExceptionHandler();
+    programTrapExceptionHandler();
   }
 
   // (10) update swap table

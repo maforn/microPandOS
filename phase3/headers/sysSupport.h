@@ -5,6 +5,7 @@
 
 #define PARENT 0
 void generalExceptionHandler();
+void programTrapExceptionHandler();
 support_t *getSupStruct();
 
 #endif

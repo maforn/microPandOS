@@ -144,7 +144,7 @@ void writeOnDevice(pcb_t *sender, void *arg, unsigned int controller_number, uns
 	
 		// check that status is not an error
 		if ((status & STATMASK) != ok_code) 
-			generalExceptionHandler();
+			programTrapExceptionHandler();
 		
     // get the next char
 		string++;
