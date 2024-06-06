@@ -89,6 +89,10 @@ void getTOD(pcb_t *sender) {
 
 // Terminate SST and child
 void terminateSST() {
+  // free the memory frames occupied by corresponding uproc
+  support_t *proc_sup = getSupStruct();
+  freeProcFrames(proc_sup->sup_asid);
+
   // sending message to initProc to communicate the termination of the SST
   SYSCALL(SENDMESSAGE, (unsigned int)initiator_pcb, 0, 0);
   // terminate sst (current process) and its progeny
