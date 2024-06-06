@@ -21,15 +21,6 @@ static inline unsigned int getFrameAddr(int frame_index) {
 }
 
 void update_TLB(pteEntry_t pte) {
-  // TODO: switch to better approach
-  /*
-  TLBCLR();
-  setENTRYHI(pte.pte_entryHI);
-  setENTRYLO(pte.pte_entryLO);
-  TLBWR();
-  */
-
-  // better approach
   setENTRYHI(pte.pte_entryHI);
   setENTRYLO(pte.pte_entryLO);
 
@@ -71,11 +62,24 @@ static inline unsigned int writeToFlash(int page, int frame, int devnum) {
 }
 
 int pickSwapFrame() {
-  // TOOD: replace with better algorithm
   static int frame_index = 0;
-  int i = frame_index;
-  frame_index = (frame_index + 1) % POOLSIZE;
-  return i;
+  int swap_frame = -1;
+
+  // check if an unoccupied frame is present
+  for(int i = 0; i < POOLSIZE && swap_frame == -1; i++){
+    if(swap_table[i].sw_asid == FREEFRAME)
+      swap_frame = i;
+  }
+
+  // if no free frame was found, pick one based on "FIFO" policy
+  if(swap_frame == -1)
+    swap_frame = frame_index;
+  
+  // update frame_index for "FIFO" replacement
+  if(swap_frame == frame_index)
+    frame_index = (frame_index + 1) % POOLSIZE;
+  
+  return swap_frame;
 }
 
 void TLB_ExceptionHandler() {
@@ -166,4 +170,12 @@ void TLB_ExceptionHandler() {
 
   // (14) return control to current process
   LDST(&proc_state);
+}
+
+
+void freeProcFrames(int asid){
+  for(int i = 0; i < POOLSIZE; i++){
+    if(swap_table[i].sw_asid == asid)
+      swap_table[i].sw_asid = FREEFRAME;
+  }
 }
