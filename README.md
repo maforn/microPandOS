@@ -138,7 +138,7 @@ For security reasons, we cannot expose the SSI pcb (`true_ssi_pcb`) as a global 
 Each `pcb_t` has a field called `p_time` that keeps track of how much time the process was active (i.e. used the CPU). We decided that it was sufficient to update this field only when the process was blocked by an event that may be either the Local Timer (`p_time += TIMESLICE`) and by the blocking Syscall (update the field with the time passed: `p_time += TIMESLICE - getTIMER()`). When a process asks the SSI how much time it has used the CPU, it will do a blocking syscall or it may be interrupted by the Local Timer, so on all the relevant occasions the field is correctly updated.
 
 #### setMIE before WAIT
-When the scheduler needs to wait for the next interrupt, we have to ignore the local timer or the waiting scheduler will be continuously interrupted while it may be waiting for the interval timer (that is, in our case, 20 times the local timer). To avoid this we set the MIE to listen to all but the Local Timer interrupts.
+When the scheduler needs to wait for the next interrupt, we have to ignore the local timer or the waiting scheduler will be continuously interrupted while it may be waiting for the interval timer. To avoid this we set the MIE mask to listen to all but the Local Timer interrupts.
 
 #### Memcpy
 We had to reimplement memcpy in the [utils](/phase2/utils.c) as the compiler substituted the * (dereferencing) with memcpy automatically when handling structures.
