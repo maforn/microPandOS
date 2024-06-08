@@ -20,7 +20,7 @@ In this phase we developed the true kernel of the OS: we added the initial booti
 
 ---
 ### The Initial Booting
-In the [initial](/phase2/initial.c) file we declare and set up all the required structures and global variables, such as the ready queue, the number of existing processes, and so on. We then set up the global interval timer, the SSI as the first process, and the initiator process that will initialize all the swap mutex processes and all the SSTs. Finally, we call the scheduler.
+In the [initial](/phase2/initial.c) file we declare and set up all the required structures and global variables, such as the ready queue, the number of existing processes, and so on. We then set up the global interval timer, the SSI as the first process and the initiator process that will initialize all the swap mutex processes and all the SSTs. Finally, we call the scheduler.
 
 
 ---
@@ -82,7 +82,7 @@ In this phase, we created an environment for the user-processes and set up the v
 
 ---
 ### The Initiator Process
-The [initiator](/phase3/initProc.c) process, started by the initializer in Phase 2, will set up the swap area, clear the TLB and create a support process that will act as a mutex for access to the swap table, then it will start one SST for each planned user-process. Finally, it will wait for each SST to communicate its death and then it will suicide itself. At this point, the system will halt.
+The [initiator](/phase3/initProc.c) process, started by the initializer in Phase 2, will set up the swap area, clear the TLB and create a support process that will act as a mutex for access to the swap table, then it will start one SST for each planned user-process. Finally, it will wait for each SST to communicate its death and then it will kill itself. At this point, the system will halt.
 
 ---
 ### The System Service Thread
@@ -99,17 +99,17 @@ This service will manage the requests to the terminal corresponding to the user-
 
 ---
 ### The Virtual Memory Manager
-All-access to memory above the TLB floor address defined in the [config](config_machine.json) file will be managed by the TLB as virtual memory. In the [virtual memory](/phase3/vmSupport.c) file we define the swap area and the swap table, as well as the TLB Exception Handler.
+All access to memory above the TLB floor address defined in the [config](config_machine.json) file will be managed by the TLB as virtual memory. In the [virtual memory](/phase3/vmSupport.c) file we define the swap area and the swap table, as well as the TLB Exception Handler.
 
 #### The TLB Exception Handler
 When an exception of type `PGFAULTEXCEPT` is raised by a user-process, the pass up or die of Phase 2 will load the context and set the user-process in kernel mode with the code of this function. This function will obtain the pointer to the Current Process’s Support Structure by requesting it to the SSI, gain mutual exclusion over the Swap Pool table, and pick a frame from the swap pool. If the frame is already occupied it will write back to the corresponding flash device the new value and set the page in the table as invalid. Then it will write the new content of the new requested page from the flash drive and update both the TLB and the process page table. Finally, it will release the mutex and load back the process to the previous state.
 
 ---
 ### The Support Level General Exception Handler
-When an exception of type `GENERALEXCEPT` is raised by a user-process, the passup or die of Phase 2 will passup the exception to the [general exception](/phase3/sysSupport.c) handler. The entry function will check the cause of the exception and either call the syscall wrapper or the trap handler.
+When an exception of type `GENERALEXCEPT` is raised by a user-process, the passup or die of Phase 2 will pass up the exception to the [general exception](/phase3/sysSupport.c) handler. The entry function will check the cause of the exception and either call the syscall wrapper or the trap handler.
 
 #### The SYSCALL Exception Handler
-Any syscall called in user mode will be intercepted and passed to this function that will act as a wrapper and send and receive the messages, after setting up the correct addresses and payloads. After finishing the program counter will be increased and the state of the user-process will be loaded back on.
+Any syscall called in user mode will be intercepted and passed to this function that will act as a wrapper and send and receive the messages, after setting up the correct addresses and payloads. After finishing, the program counter will be increased and the state of the user-process will be loaded back on.
 
 #### The Program Trap Exception Handler
 Any program trap that is not directly handled by the kernel or by the other structures of Phase 3 will cause the process to terminate, thus the handler will send a message to the corresponding SST asking to be terminated.  
@@ -120,7 +120,7 @@ Any program trap that is not directly handled by the kernel or by the other stru
 #### Stack Pointers Allocations
 All of the stack pointers of the various pcbs are manually set based on necessity and RAM size (see [Memory Management](#memory-management) for further details). This is the scheme on how RAM is used:  
 ![Ram Scheme](/images/ram_scheme.png)  
-When the OS is booted, the Kernel will grow its tack from 0x2000.1000 downwards, but we still have to allocate all the stack pointers of the other processes. The first process (the SSI) will have its stack pointer allocated to RAMTOP. We will leave two pages for it and then allocate 8 pages, an half for each user-process exception context. This is necessary because the normal user-process stack pointer is set the user stack top address 0xC000.0000, but when we have an exception and we load the context we are executing in kernel mode and need a stack area in the RAM for the new variables. As there are two possible context for each uproc and we assign half a page each, we need a total of eight pages. After this area we assign the stack pointer for the Initiator Pcb and from there we create and assign the stack pointer for each of its child processes (mutex and SSTs) giving a `QPAGE` (quarter of a page) each.
+When the OS is booted, the Kernel will grow its tack from 0x2000.1000 downwards, but we still have to allocate all the stack pointers of the other processes. The first process (the SSI) will have its stack pointer allocated to RAMTOP. We will leave two pages for it and then allocate 8 pages, and a half for each user-process exception context. This is necessary because the normal user-process stack pointer is set to the user stack top address 0xC000.0000, but when we have an exception and we load the context we are executing in kernel mode and need a stack area in the RAM for the new variables. As there are two possible contexts for each proc and we assign half a page each, we need a total of eight pages. After this area, we assign the stack pointer for the Initiator Pcb, and from there, we create and assign the stack pointer for each of its child processes (mutex and SSTs) giving a `QPAGE` (quarter of a page) each.
 
 #### Edited the `pcb_t` structure
 We have added a new field to the original structure of `pcb_t`, as we deemed it necessary to have an additional `blocked` field to check if the process was already in a queue of blocked pcbs, not yet blocked, or in the ready queue. This is necessary because each process can be waiting for both a message and the Interval Timer or a Device IO. As each process `p_list` cannot be in two queues at the same time, we manage the insertion in each queue with this field.  
@@ -160,7 +160,7 @@ The BIOS portion corresponds to kseg0 and can be accessed in kernel mode only.
 Mapping a logical address to a physical address (address translation) is performed by the MMU (Memory Management Unit) of each processor’s CP0 co-processor. CP0 contains five control registers (Index, Random, EntryHi, EntryLo, and BadVAddr) in addition to a TLB associative cache to support address translation.
 #### The TLB
 The TLB (Translation Lookaside Buffer) is an associative cache, that can hold between 4–64 TLB entries. Each TLB entry describes the mapping between one ASID/logical page number pairing and a physical frame number/location in RAM.  
-Any access above the TLB Floor Address, which can be set to RAMPTOP, 0x4000.0000 or 0x8000.0000, will undergo an MMU address translation to its corresponding physical address.
+Any access above the TLB Floor Address, which can be set to RAMPTOP, 0x4000.0000, or 0x8000.0000, will undergo an MMU address translation to its corresponding physical address.
 
 
 ## Documentation

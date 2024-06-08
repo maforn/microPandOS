@@ -11,7 +11,7 @@
 
 extern swap_t swap_table[POOLSIZE]; // swap table
 
-// handles a TLB exception
+// handles TLB exceptions
 void TLB_ExceptionHandler();
 
 // initializes the swap table
