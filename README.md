@@ -82,7 +82,7 @@ In this phase, we created an environment for the user-processes and set up the v
 
 ---
 ### The Initiator Process
-The [initiator](/phase3/initProc.c) process, started by the initializer in Phase 2, will set up the swap area, clear the TLB and create a support process that will act as a mutex for access to the swap table, then it will start one SST for each planned user-process. Finally, it will wait for each SST to communicate its death and then it will suicide itself. At this point, the system will halt.
+The [initiator](/phase3/initProc.c) process, started by the initializer in Phase 2, will set up the swap area, clear the TLB and create a support process that will act as a mutex for access to the swap table, then it will start one SST for each planned user-process. Finally, it will wait for each SST to communicate its death and then it will kill itself. At this point, the system will halt.
 
 ---
 ### The System Service Thread
@@ -106,10 +106,10 @@ When an exception of type `PGFAULTEXCEPT` is raised by a user-process, the pass 
 
 ---
 ### The Support Level General Exception Handler
-When an exception of type `GENERALEXCEPT` is raised by a user-process, the passup or die of Phase 2 will passup the exception to the [general exception](/phase3/sysSupport.c) handler. The entry function will check the cause of the exception and either call the syscall wrapper or the trap handler.
+When an exception of type `GENERALEXCEPT` is raised by a user-process, the passup or die of Phase 2 will pass up the exception to the [general exception](/phase3/sysSupport.c) handler. The entry function will check the cause of the exception and either call the syscall wrapper or the trap handler.
 
 #### The SYSCALL Exception Handler
-Any syscall called in user mode will be intercepted and passed to this function that will act as a wrapper and send and receive the messages, after setting up the correct addresses and payloads. After finishing the program counter will be increased and the state of the user-process will be loaded back on.
+Any syscall called in user mode will be intercepted and passed to this function that will act as a wrapper and send and receive the messages, after setting up the correct addresses and payloads. After finishing, the program counter will be increased and the state of the user-process will be loaded back on.
 
 #### The Program Trap Exception Handler
 Any program trap that is not directly handled by the kernel or by the other structures of Phase 3 will cause the process to terminate, thus the handler will send a message to the corresponding SST asking to be terminated.  

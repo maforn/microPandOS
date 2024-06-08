@@ -16,11 +16,12 @@ void initSwapStructs() {
     swap_table[i].sw_asid = FREEFRAME;
 }
 
-// get physical frame address
+// gets physical frame address
 static inline unsigned int getFrameAddr(int frame_index) {
   return SWAPSTARTADDR + frame_index * PAGESIZE;
 }
 
+// updates the TLB to include the specified entry
 void update_TLB(pteEntry_t pte) {
   setENTRYHI(pte.pte_entryHI);
   setENTRYLO(pte.pte_entryLO);
@@ -33,9 +34,12 @@ void update_TLB(pteEntry_t pte) {
     TLBWR(); // otherwise, add new entry
 }
 
-unsigned int readWriteFlash(int operation, int page, int frame, int devnum) {
+// function to either:
+// (1) read a flash device's page to a memory frame
+// (2) write a memory frame to a flash device's page
+unsigned int readWriteFlash(int operation, int page, int frame, int controller_num) {
   static devreg_t *controller;
-  controller = (devreg_t *)DEV_REG_ADDR(IL_FLASH, devnum);
+  controller = (devreg_t *)DEV_REG_ADDR(IL_FLASH, controller_num);
   controller->dtp.data0 = getFrameAddr(frame);
 
   ssi_do_io_t do_io = {
@@ -54,15 +58,17 @@ unsigned int readWriteFlash(int operation, int page, int frame, int devnum) {
   return status;
 }
 
-static inline unsigned int readFromFlash(int page, int frame, int devnum) {
-  return readWriteFlash(FLASHREAD, page, frame, devnum);
+// wrapper for readWriteFlash used for read operations
+static inline unsigned int readFromFlash(int page, int frame, int controller_num) {
+  return readWriteFlash(FLASHREAD, page, frame, controller_num);
 }
 
-static inline unsigned int writeToFlash(int page, int frame, int devnum) {
-  return readWriteFlash(FLASHWRITE, page, frame, devnum);
+// wrapper for readWriteFlash used for write operations
+static inline unsigned int writeToFlash(int page, int frame, int controller_num) {
+  return readWriteFlash(FLASHWRITE, page, frame, controller_num);
 }
 
-
+// picks a frame for a page, also implementing replacement policy
 int pickSwapFrame() {
   // staic var that is conserved
   static int frame_index = 0;
@@ -85,6 +91,7 @@ int pickSwapFrame() {
   return swap_frame;
 }
 
+// handles TLB exceptions
 void TLB_ExceptionHandler() {
 
   // (1) get support structure of current process
@@ -175,7 +182,7 @@ void TLB_ExceptionHandler() {
   LDST(&proc_state);
 }
 
-// free al the proc frames by setting them to FREEFRAME (-1)
+// frees al the proc frames by setting them to FREEFRAME (-1)
 void freeProcFrames(int asid){
   for(int i = 0; i < POOLSIZE; i++){
     if(swap_table[i].sw_asid == asid)
