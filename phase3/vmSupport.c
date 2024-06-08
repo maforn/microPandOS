@@ -182,7 +182,7 @@ void TLB_ExceptionHandler() {
   LDST(&proc_state);
 }
 
-// frees al the proc frames by setting them to FREEFRAME (-1)
+// frees all the proc frames by setting them to FREEFRAME (-1)
 void freeProcFrames(int asid){
   for(int i = 0; i < POOLSIZE; i++){
     if(swap_table[i].sw_asid == asid)
