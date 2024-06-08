@@ -143,6 +143,9 @@ When the scheduler needs to wait for the next interrupt, we have to ignore the l
 #### Memcpy
 We had to reimplement memcpy in the [utils](/phase2/utils.c) as the compiler substituted the * (dereferencing) with memcpy automatically when handling structures.
 
+#### Frame Selection for Virtual Memory
+The algorithm used to select a RAM frame for a page of virtual memory combines a FIFO algorithm with a linear search for a free frame. The FIFO approach chooses frames circularly, while the other approach scans the table of frames looking for the first unoccupied one. The two methods work independently and are used in sequence. First, the swap table is scanned in search of a free frame. If one is found, it is used. Otherwise, the FIFO algorithm is called, which will select in constant time the frame following the last one chosen (by FIFO). If the linear search picks the same frame that FIFO would pick, FIFO's pointer moves to the next frame. It is necessary to prevent subsequent selections of the same frame.
+
 ## Memory Management:
 μPandOS uses 32-bit addresses, giving rise to a 2<sup>32</sup> byte (4 GB) address space. The 4 GB address space is logically divided into four chunks/spaces as follows:
 ![Ksegs divison](/images/ksegs.png) 
