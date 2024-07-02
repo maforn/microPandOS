@@ -201,12 +201,9 @@ void receiveMessage(state_t *proc_state) {
     if ((pcb_t *)current_process->p_s.reg_a1 == ssi_pcb)
       current_process->p_s.reg_a1 = (memaddr)true_ssi_pcb;
 
-    // block process if it is not already blocked by the ssi in waitForClock or
-    // doIO
-    if (current_process->blocked == 0) {
-      insertProcQ(&waiting_MSG, current_process);
-      current_process->blocked = 1;
-    }
+    // block process
+    insertProcQ(&waiting_MSG, current_process);
+    current_process->blocked = 1;
     current_process = NULL;
     schedule();
   } else {

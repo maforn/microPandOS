@@ -147,7 +147,7 @@ We had to reimplement memcpy in the [utils](/phase2/utils.c) as the compiler sub
 The algorithm used to select a RAM frame for a page of virtual memory combines a FIFO algorithm with a linear search for a free frame. The FIFO approach chooses frames circularly, while the other approach scans the table of frames looking for the first unoccupied one. The two methods work independently and are used in sequence. First, the swap table is scanned in search of a free frame. If one is found, it is used. Otherwise, the FIFO algorithm is called, which will select in constant time the frame following the last one chosen (by FIFO). If the linear search picks the same frame that FIFO would pick, FIFO's pointer moves to the next frame. It is necessary to prevent subsequent selections of the same frame.
 
 ## Memory Management:
-μPandOS uses 32-bit addresses, giving rise to a 2<sup>32</sup> byte (4 GB) address space. The 4 GB address space is logically divided into four chunks/spaces as follows:
+μPandOS uses 32-bit addresses, giving rise to a 2<sup>32</sup> byte (4 GB) address space. The 4 GB address space is logically divided into four chunks/spaces as follows:  
 ![Ksegs divison](/images/ksegs.png) 
 
 ### Physical Memory
@@ -156,7 +156,7 @@ The actual physical memory in µMPS3 is divided into two components: The BIOS po
 The BIOS portion corresponds to kseg0 and can be accessed in kernel mode only.  
 ![Bios image](/images/bios.png)  
 #### RAM
-“Installed” RAM starts at 0x2000.0000 and RAMTOP will range from 0x2000.8000 to 0x2020.0000 and it is all stored in kseg1.
+“Installed” RAM starts at 0x2000.0000 and RAMTOP will range from 0x2000.8000 to 0x2020.0000 and it is all stored in kseg1.  
 ![RAM image](/images/ram.png)
 
 ### Virtual Memory

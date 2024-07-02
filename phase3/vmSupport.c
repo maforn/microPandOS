@@ -28,7 +28,7 @@ void update_TLB(pteEntry_t pte) {
 
   TLBP(); // probe TLB
 
-  if((getINDEX() & INDEX_MASK) == 0)
+  if ((getINDEX() & INDEX_MASK) == 0)
     TLBWI(); // if a match is found, rewrite it
   else
     TLBWR(); // otherwise, add new entry
@@ -37,7 +37,8 @@ void update_TLB(pteEntry_t pte) {
 // function to either:
 // (1) read a flash device's page to a memory frame
 // (2) write a memory frame to a flash device's page
-unsigned int readWriteFlash(int operation, int page, int frame, int controller_num) {
+unsigned int readWriteFlash(int operation, int page, int frame,
+                            int controller_num) {
   static devreg_t *controller;
   controller = (devreg_t *)DEV_REG_ADDR(IL_FLASH, controller_num);
   controller->dtp.data0 = getFrameAddr(frame);
@@ -59,35 +60,37 @@ unsigned int readWriteFlash(int operation, int page, int frame, int controller_n
 }
 
 // wrapper for readWriteFlash used for read operations
-static inline unsigned int readFromFlash(int page, int frame, int controller_num) {
+static inline unsigned int readFromFlash(int page, int frame,
+                                         int controller_num) {
   return readWriteFlash(FLASHREAD, page, frame, controller_num);
 }
 
 // wrapper for readWriteFlash used for write operations
-static inline unsigned int writeToFlash(int page, int frame, int controller_num) {
+static inline unsigned int writeToFlash(int page, int frame,
+                                        int controller_num) {
   return readWriteFlash(FLASHWRITE, page, frame, controller_num);
 }
 
 // picks a frame for a page, also implementing replacement policy
 int pickSwapFrame() {
-  // staic var that is conserved
+  // static var that is conserved
   static int frame_index = 0;
   int swap_frame = -1;
 
   // check if an unoccupied frame is present
-  for(int i = 0; i < POOLSIZE && swap_frame == -1; i++){
-    if(swap_table[i].sw_asid == FREEFRAME)
+  for (int i = 0; i < POOLSIZE && swap_frame == -1; i++) {
+    if (swap_table[i].sw_asid == FREEFRAME)
       swap_frame = i;
   }
 
   // if no free frame was found, pick one based on "FIFO" policy
-  if(swap_frame == -1)
+  if (swap_frame == -1)
     swap_frame = frame_index;
-  
+
   // update frame_index for "FIFO" replacement
-  if(swap_frame == frame_index)
+  if (swap_frame == frame_index)
     frame_index = (frame_index + 1) % POOLSIZE;
-  
+
   return swap_frame;
 }
 
@@ -137,7 +140,8 @@ void TLB_ExceptionHandler() {
     // save data to corresponding flash device
     int occupying_asid = swap_table[i].sw_asid;
     int occupying_page = swap_table[i].sw_pageNo;
-    unsigned int io_status = writeToFlash(occupying_page, i, occupying_asid - 1);
+    unsigned int io_status =
+        writeToFlash(occupying_page, i, occupying_asid - 1);
 
     if (io_status != 1) {
       // pass to trap handler
@@ -183,9 +187,9 @@ void TLB_ExceptionHandler() {
 }
 
 // frees all the proc frames by setting them to FREEFRAME (-1)
-void freeProcFrames(int asid){
-  for(int i = 0; i < POOLSIZE; i++){
-    if(swap_table[i].sw_asid == asid)
+void freeProcFrames(int asid) {
+  for (int i = 0; i < POOLSIZE; i++) {
+    if (swap_table[i].sw_asid == asid)
       swap_table[i].sw_asid = FREEFRAME;
   }
 }
