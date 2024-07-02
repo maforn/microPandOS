@@ -18,8 +18,7 @@ state_t uproc_state[UPROCMAX];
 void setUpPageTable(support_t *uproc) {
   for (int i = 0; i < USERPGTBLSIZE - 1; i++) {
     uproc->sup_privatePgTbl[i].pte_entryHI =
-        (0x80000000 + i * PAGESIZE) +
-        (uproc->sup_asid << ASIDSHIFT);
+        (0x80000000 + i * PAGESIZE) + (uproc->sup_asid << ASIDSHIFT);
     uproc->sup_privatePgTbl[i].pte_entryLO = DIRTYON;
   }
   // set the last VPN to 0xBFFFF000
@@ -53,10 +52,10 @@ void SST_entry_point() {
   RAMTOP(ramtop);
   // give the top ram frames as the stack pointers for the exception handlers
   memaddr initial_stack_frame = ramtop - (2 * PAGESIZE);
-  proc_sup->sup_exceptContext[0] = (context_t){
-      .pc = (memaddr)TLB_ExceptionHandler,
-      .status = STATUS_INTERRUPT_ON_NEXT,
-      .stackPtr = initial_stack_frame - i * PAGESIZE};
+  proc_sup->sup_exceptContext[0] =
+      (context_t){.pc = (memaddr)TLB_ExceptionHandler,
+                  .status = STATUS_INTERRUPT_ON_NEXT,
+                  .stackPtr = initial_stack_frame - i * PAGESIZE};
 
   proc_sup->sup_exceptContext[1] = (context_t){
       .pc = (memaddr)generalExceptionHandler,
@@ -110,12 +109,13 @@ void terminateSST() {
   SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, 0, 0);
 }
 
-void writeOnDevice(pcb_t *sender, void *arg, unsigned int controller_number, unsigned int dev_type) {
+void writeOnDevice(pcb_t *sender, void *arg, unsigned int controller_number,
+                   unsigned int dev_type) {
   // get the controller based on the dev type
-	devreg_t *controller = (devreg_t *) DEV_REG_ADDR(dev_type, controller_number);
-	sst_print_t *print_payload = arg;
+  devreg_t *controller = (devreg_t *)DEV_REG_ADDR(dev_type, controller_number);
+  sst_print_t *print_payload = arg;
   char *string = print_payload->string;
-	devregtr status;
+  devregtr status;
   // setup the support variables based on the type of device
   unsigned int ok_code = DEVREADY, additional_char = 0;
   memaddr *command_addr = &controller->dtp.command;
@@ -124,34 +124,29 @@ void writeOnDevice(pcb_t *sender, void *arg, unsigned int controller_number, uns
     ok_code = RECVD;
   }
 
-	for (int i = 0; i < print_payload->length; i++) {
+  for (int i = 0; i < print_payload->length; i++) {
     if (dev_type == IL_TERMINAL)
       additional_char = (((devregtr)*string) << 8);
     else
-		  controller->dtp.data0 = (devregtr) *string;
+      controller->dtp.data0 = (devregtr)*string;
     // create the payload
-		ssi_do_io_t do_io = {
-			.commandAddr = command_addr,
-			.commandValue = PRINTCHR | additional_char
-		};
-		ssi_payload_t payload = {
-			.service_code = DOIO,
-			.arg = &do_io
-		};
+    ssi_do_io_t do_io = {.commandAddr = command_addr,
+                         .commandValue = PRINTCHR | additional_char};
+    ssi_payload_t payload = {.service_code = DOIO, .arg = &do_io};
     // SSI DOIO
-		SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)&payload, 0);
-		SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)&status, 0);
-	
-		// check that status is not an error
-		if ((status & STATMASK) != ok_code) 
-			programTrapExceptionHandler();
-		
-    // get the next char
-		string++;
-	}
+    SYSCALL(SENDMESSAGE, (unsigned int)ssi_pcb, (unsigned int)&payload, 0);
+    SYSCALL(RECEIVEMESSAGE, (unsigned int)ssi_pcb, (unsigned int)&status, 0);
 
-	// write to the sender that is awaiting an empty response
-	SYSCALL(SENDMESSAGE, (unsigned int)sender, 0, 0);
+    // check that status is not an error
+    if ((status & STATMASK) != ok_code)
+      programTrapExceptionHandler();
+
+    // get the next char
+    string++;
+  }
+
+  // write to the sender that is awaiting an empty response
+  SYSCALL(SENDMESSAGE, (unsigned int)sender, 0, 0);
 }
 
 void SSTRequest(pcb_t *sender, int service, void *arg, int number) {

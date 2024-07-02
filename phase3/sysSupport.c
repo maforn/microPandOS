@@ -21,7 +21,6 @@ support_t *getSupStruct() {
   return sup_struct;
 }
 
-
 // entry point of the general exception handler
 void generalExceptionHandler() {
 
@@ -57,11 +56,12 @@ void SYSCALLExceptionHandler(support_t *support_struct) {
     // get the destination process
     pcb_t *destination = (pcb_t *)proc_state->reg_a1;
 
-    if (destination == PARENT) 
+    if (destination == PARENT)
       destination = current_process->p_parent;
 
     // syscall to send the message (reg_a2 is the payload)
-    SYSCALL(SENDMESSAGE, (unsigned int)destination, (unsigned int)proc_state->reg_a2, 0);
+    SYSCALL(SENDMESSAGE, (unsigned int)destination,
+            (unsigned int)proc_state->reg_a2, 0);
 
   } else if (proc_state->reg_a0 == RECEIVEMSG) {
 
@@ -72,7 +72,8 @@ void SYSCALLExceptionHandler(support_t *support_struct) {
       sender = current_process->p_parent;
 
     // syscall to receive the message (reg_a2 is the payload)
-    SYSCALL(RECEIVEMESSAGE, (unsigned int)sender, (unsigned int)proc_state->reg_a2, 0);
+    SYSCALL(RECEIVEMESSAGE, (unsigned int)sender,
+            (unsigned int)proc_state->reg_a2, 0);
   }
 
   // set the result of the syscall
@@ -88,11 +89,12 @@ void programTrapExceptionHandler() {
   SYSCALL(SENDMESSAGE, (unsigned int)swap_mutex_pcb, 1, 0);
 
   ssi_payload_t sst_payload = {
-  .service_code = TERMINATE,
-  .arg = 0,
+      .service_code = TERMINATE,
+      .arg = 0,
   };
   // send the terminate message to the parent (the sst)
-  SYSCALL(SENDMESSAGE, (unsigned int)current_process->p_parent, (unsigned int)&sst_payload, 0);
+  SYSCALL(SENDMESSAGE, (unsigned int)current_process->p_parent,
+          (unsigned int)&sst_payload, 0);
 
   // block the process
   SYSCALL(RECEIVEMESSAGE, (unsigned int)current_process->p_parent, 0, 0);

@@ -1,7 +1,6 @@
 #include "./headers/initProc.h"
 #include "../phase2/headers/initial.h"
 #include "./headers/sst.h"
-#include "./headers/sysSupport.h"
 #include "./headers/vmSupport.h"
 #include <uriscv/liburiscv.h>
 
@@ -34,7 +33,8 @@ void swap_mutex() {
   pcb_t *p;
   int *i;
   while (1) {
-    // use i to determinate if it is a forced release for mutex message on process termination
+    // use i to determinate if it is a forced release for mutex message on
+    // process termination
     i = 0;
     // wait for someone to request the mutual exlusion
     p = (pcb_t *)SYSCALL(RECEIVEMESSAGE, ANYMESSAGE, (unsigned int)&i, 0);
