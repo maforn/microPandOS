@@ -3,7 +3,7 @@
 #include "headers/initProc.h"
 #include <uriscv/liburiscv.h>
 
-void SYSCALLExceptionHandler(support_t *support_struct);
+void SYSCALLExceptionHandler(state_t *proc_state);
 void programTrapExceptionHandler();
 
 // support function used to get a proc's support struct in phase 3
@@ -35,12 +35,18 @@ void generalExceptionHandler() {
 
   if (cause == SYSEXCEPTION) {
 
-    // call the syscall exception handler
-    SYSCALLExceptionHandler(support_struct);
+    state_t *proc_state = &(support_struct->sup_exceptState[GENERALEXCEPT]);
 
-    // load back the process state after the exception is handled
-    LDST(exceptionState);
+    if(proc_state->reg_a0 == SENDMSG || proc_state->reg_a0 == RECEIVEMSG){
+      // call the syscall exception handler
+      SYSCALLExceptionHandler(proc_state);
 
+      // load back the process state after the exception is handled
+      LDST(exceptionState);
+    } else{
+      // invalid sysycall request: call the trap exception handler
+      programTrapExceptionHandler();
+    }
   } else {
     // call the trap exception handler
     programTrapExceptionHandler();
@@ -48,8 +54,7 @@ void generalExceptionHandler() {
 }
 
 // handles syscall on user level
-void SYSCALLExceptionHandler(support_t *support_struct) {
-  state_t *proc_state = &(support_struct->sup_exceptState[GENERALEXCEPT]);
+void SYSCALLExceptionHandler(state_t *proc_state) {
 
   if (proc_state->reg_a0 == SENDMSG) {
 
@@ -60,9 +65,7 @@ void SYSCALLExceptionHandler(support_t *support_struct) {
       destination = current_process->p_parent;
 
     // syscall to send the message (reg_a2 is the payload)
-    SYSCALL(SENDMESSAGE, (unsigned int)destination,
-            (unsigned int)proc_state->reg_a2, 0);
-
+    SYSCALL(SENDMESSAGE, (unsigned int)destination, (unsigned int)proc_state->reg_a2, 0);
   } else if (proc_state->reg_a0 == RECEIVEMSG) {
 
     // get the sender process
@@ -72,8 +75,7 @@ void SYSCALLExceptionHandler(support_t *support_struct) {
       sender = current_process->p_parent;
 
     // syscall to receive the message (reg_a2 is the payload)
-    SYSCALL(RECEIVEMESSAGE, (unsigned int)sender,
-            (unsigned int)proc_state->reg_a2, 0);
+    SYSCALL(RECEIVEMESSAGE, (unsigned int)sender, (unsigned int)proc_state->reg_a2, 0);
   }
 
   // set the result of the syscall
