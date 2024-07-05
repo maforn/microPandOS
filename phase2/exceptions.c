@@ -66,20 +66,29 @@ void exceptionHandler() {
     // remove the interrupt bit so we can get the cause without the additional
     // bit
     cause &= NOT_INTERRUPT_MASK;
-    if (cause == IL_TIMER) // Global Interval Timer
-      handleIntervalTimer();
-    else if (cause == IL_CPUTIMER) // PLT timer
-      handleLocalTimer();
-    else if (cause == IL_DISK)
-      handleDeviceInterrupt(IL_DISK - DEV_IL_START);
-    else if (cause == IL_FLASH)
-      handleDeviceInterrupt(IL_FLASH - DEV_IL_START);
-    else if (cause == IL_ETHERNET)
-      handleDeviceInterrupt(IL_ETHERNET - DEV_IL_START);
-    else if (cause == IL_PRINTER)
-      handleDeviceInterrupt(IL_PRINTER - DEV_IL_START);
-    else if (cause == IL_TERMINAL)
-      handleDeviceInterrupt(IL_TERMINAL - DEV_IL_START);
+    switch (cause) {
+      case IL_TIMER: // Global Interval Timer
+        handleIntervalTimer();
+        break;
+      case IL_CPUTIMER: // PLT timer
+        handleLocalTimer();
+        break;
+      case IL_DISK:
+        handleDeviceInterrupt(IL_DISK - DEV_IL_START);
+        break;
+      case IL_FLASH:
+        handleDeviceInterrupt(IL_FLASH - DEV_IL_START);
+        break;
+      case IL_ETHERNET:
+        handleDeviceInterrupt(IL_ETHERNET - DEV_IL_START);
+        break;
+      case IL_PRINTER:
+        handleDeviceInterrupt(IL_PRINTER - DEV_IL_START);
+        break;
+      case IL_TERMINAL:
+        handleDeviceInterrupt(IL_TERMINAL - DEV_IL_START);
+        break;
+    }
   }
   // not an interrupt
   else {
